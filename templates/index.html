@@ -128,10 +128,25 @@
             }
         }
         
+        let currentProjectFilter = 'all';
+        
         function renderTickets(container) {
             const allTickets = Object.entries(db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
-            const tickets = allTickets.length ? allTickets : [{id: 'Demo-1', Title: 'No tickets yet', Status: 'Open', 'Issue Type': 'Feature', Environment: 'STG', Severity: 'Medium'}];
+            
+            const projectTabs = ['all', ...projects.map(p => p.id)];
+            const filteredTickets = currentProjectFilter === 'all' 
+                ? allTickets 
+                : allTickets.filter(t => (t.Project || 'default').toLowerCase() === currentProjectFilter);
+            
+            const tickets = filteredTickets.length ? filteredTickets : (allTickets.length ? [] : [{id: 'Demo-1', Title: 'No tickets yet', Status: 'Open', 'Issue Type': 'Feature', Environment: '', Severity: 'Medium'}]);
+            
             container.innerHTML = `
+                <div class="flex gap-2 mb-4 border-b border-[#2d2d44] pb-2" style="overflow-x:auto">
+                    ${projectTabs.map(p => `
+                        <button class="tab-btn ${currentProjectFilter === p ? 'active' : ''}" onclick="filterByProject('${p}')">${p === 'all' ? 'All' : p}</button>
+                    `).join('')}
+                </div>
+                ${tickets.length === 0 ? '<div class="text-center text-[#868e96] py-8">No tickets found</div>' : `
                 <div style="display:grid;grid-template-columns:40px 120px 2fr 100px 150px 80px 80px 100px;gap:8px;padding:12px;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;color:#868e96;border-bottom:2px solid #da77f2;">
                     <div>#</div><div>ID</div><div>Title</div><div>Type</div><div>Status</div><div>Env</div><div>ETA</div><div>Severity</div>
                 </div>
@@ -146,9 +161,14 @@
                         <div style="font-size:12px;text-align:center">${t.ETA || '-'}</div>
                         <div style="color:${getColor('severity', t.Severity)};font-size:12px">${(t.Severity || '').toLowerCase()}</div>
                     </div>
-                `).join('')}
+                `).join('')}`}
             `;
             document.getElementById('totalTickets').textContent = allTickets.length;
+        }
+        
+        function filterByProject(project) {
+            currentProjectFilter = project;
+            renderTickets(document.getElementById('mainContent'));
         }
         
         function renderImport(container) {
@@ -160,14 +180,6 @@
                             <div>
                                 <label class="block text-sm text-[#868e96] mb-2">Project Name</label>
                                 <input type="text" id="importProject" class="input w-full" placeholder="default">
-                            </div>
-                            <div>
-                                <label class="block text-sm text-[#868e96] mb-2">Environment (for batch)</label>
-                                <select id="importEnv" class="input w-full">
-                                    <option>STG</option>
-                                    <option>Production</option>
-                                    <option>TBD</option>
-                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm text-[#868e96] mb-2">CSV/Excel File</label>
@@ -187,14 +199,6 @@
                                 <label class="block text-sm text-[#868e96] mb-2">Project Name</label>
                                 <input type="text" id="gsProject" class="input w-full" placeholder="default">
                             </div>
-                            <div>
-                                <label class="block text-sm text-[#868e96] mb-2">Environment</label>
-                                <select id="gsEnv" class="input w-full">
-                                    <option>STG</option>
-                                    <option>Production</option>
-                                    <option>TBD</option>
-                                </select>
-                            </div>
                             <button class="btn btn-primary w-full" onclick="doGSheetImport()"><i class="fas fa-download mr-2"></i>Import</button>
                         </div>
                     </div>
@@ -208,7 +212,6 @@
             const formData = new FormData();
             formData.append('file', file);
             formData.append('project', document.getElementById('importProject').value || 'default');
-            formData.append('env', document.getElementById('importEnv').value);
             const res = await fetch('/api/import', { method: 'POST', body: formData });
             const data = await res.json();
             if (data.success) {
@@ -225,7 +228,7 @@
             const res = await fetch('/api/gsheet/import', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ url, project: document.getElementById('gsProject').value || 'default', env: document.getElementById('gsEnv').value })
+                body: JSON.stringify({ url, project: document.getElementById('gsProject').value || 'default' })
             });
             const data = await res.json();
             if (data.success) {
@@ -343,7 +346,7 @@
                     await fetch('/api/gsheet/import', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ url: p.gsheet_url, project: p.id, env: 'STG' })
+                        body: JSON.stringify({ url: p.gsheet_url, project: p.id })
                     });
                 }
             }

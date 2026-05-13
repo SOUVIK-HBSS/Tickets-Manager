@@ -129,26 +129,42 @@ def read_excel(path):
 
 def read_gsheet_public(url, sheet_name=""):
     url = url.strip()
-    if "/edit" in url or "/form" in url:
-        url = url.replace("/edit#gid=", "/export?format=csv&gid=")
-        url = re.sub(r"/edit.*", "/export?format=csv", url)
-        if "gid=" not in url:
-            url += ("?" if "?" not in url else "&") + "format=csv"
-    elif "export?format=csv" not in url:
-        url = url.rstrip("/")
-        url += "/export?format=csv"
-
+    
+    gid_match = re.search(r'gid=(\d+)', url)
+    gid = gid_match.group(1) if gid_match else "0"
+    
+    sheet_name_from_url = ""
+    if "?" in url:
+        base_url = url.split("?")[0]
+    else:
+        base_url = url
+    
+    if "/edit" in url:
+        base_url = re.sub(r"/edit.*", "", url)
+    
+    export_url = f"{base_url}/export?format=csv&gid={gid}"
+    
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=30) as response:
             content = response.read().decode("utf-8-sig")
+        
+        if not content.strip():
+            return [], "Empty sheet content"
+        
         from io import StringIO
         reader = csv.DictReader(StringIO(content))
         records = []
         for row in reader:
             if any(v for v in row.values()):
                 records.append(row)
-        return records, None
+        
+        if not records:
+            return [], "No records found in sheet"
+        
+        return records, gid
+    except urllib.error.HTTPError as e:
+        return [], f"HTTP Error: {e.code} - {e.reason}"
     except Exception as e:
         return [], str(e)
 
@@ -411,7 +427,7 @@ def get_projects(db):
     return list(projects.values())
 
 
-def import_records_to_db(records, project, batch_env):
+def import_records_to_db(records, project):
     db = load_db()
     new_count = 0
     updated_count = 0
@@ -424,12 +440,15 @@ def import_records_to_db(records, project, batch_env):
             continue
         current_ids.add(raw_id)
         rec = {**row, "imported": True, "Project": project}
-        if batch_env:
-            rec["Environment"] = batch_env
-            rec["ETA"] = batch_env
 
         if raw_id in db:
+            existing_env = db[raw_id].get("Environment", "")
+            existing_eta = db[raw_id].get("ETA", "")
             db[raw_id] = {**db[raw_id], **rec}
+            if existing_env:
+                db[raw_id]["Environment"] = existing_env
+            if existing_eta:
+                db[raw_id]["ETA"] = existing_eta
             updated_count += 1
         else:
             db[raw_id] = rec
@@ -447,7 +466,7 @@ def import_records_to_db(records, project, batch_env):
     return new_count, updated_count, current_ids, missing_ids
 
 
-def import_file_to_db(file_path, project, batch_env):
+def import_file_to_db(file_path, project):
     ext = Path(file_path).suffix.lower()
     if ext in [".xlsx", ".xls"]:
         records = read_excel(file_path)
@@ -455,17 +474,17 @@ def import_file_to_db(file_path, project, batch_env):
         records = read_csv(file_path)
     else:
         return 0, 0, [], f"Unsupported: {ext}"
-    new_c, updated_c, _, missing = import_records_to_db(records, project, batch_env)
+    new_c, updated_c, _, missing = import_records_to_db(records, project)
     return new_c, updated_c, missing, None
 
 
-def import_gsheet_to_db(url, project, batch_env):
+def import_gsheet_to_db(url, project):
     records, err = read_gsheet_public(url)
     if err:
         return 0, 0, [], err
     if not records:
         return 0, 0, [], "No records found in sheet"
-    new_c, updated_c, _, missing = import_records_to_db(records, project, batch_env)
+    new_c, updated_c, _, missing = import_records_to_db(records, project)
     return new_c, updated_c, missing, None
 
 
@@ -493,7 +512,6 @@ def index():
 @app.route("/api/import", methods=["POST"])
 def api_import():
     project = request.form.get("project", "default").strip()
-    batch_env = request.form.get("env", "STG").strip()
     file_path = None
 
     if "file" in request.files:
@@ -507,7 +525,7 @@ def api_import():
     if not file_path or not os.path.exists(file_path):
         return jsonify({"success": False, "error": f"File not found: {file_path}"}), 400
 
-    new_c, updated_c, missing, err = import_file_to_db(file_path, project, batch_env)
+    new_c, updated_c, missing, err = import_file_to_db(file_path, project)
     if err:
         return jsonify({"success": False, "error": err}), 400
 
@@ -526,12 +544,11 @@ def api_gsheet_import():
     data = request.get_json()
     url = data.get("url", "").strip()
     project = data.get("project", "default").strip()
-    batch_env = data.get("env", "STG").strip()
 
     if not url:
         return jsonify({"success": False, "error": "URL required"}), 400
 
-    new_c, updated_c, missing, err = import_gsheet_to_db(url, project, batch_env)
+    new_c, updated_c, missing, err = import_gsheet_to_db(url, project)
     if err:
         return jsonify({"success": False, "error": err}), 400
 
