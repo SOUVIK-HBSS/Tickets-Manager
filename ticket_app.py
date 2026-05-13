@@ -131,9 +131,8 @@ def read_gsheet_public(url, sheet_name=""):
     url = url.strip()
     
     gid_match = re.search(r'gid=(\d+)', url)
-    gid = gid_match.group(1) if gid_match else "0"
+    gid = gid_match.group(1) if gid_match else None
     
-    sheet_name_from_url = ""
     if "?" in url:
         base_url = url.split("?")[0]
     else:
@@ -142,29 +141,59 @@ def read_gsheet_public(url, sheet_name=""):
     if "/edit" in url:
         base_url = re.sub(r"/edit.*", "", url)
     
-    export_url = f"{base_url}/export?format=csv&gid={gid}"
+    all_records = []
+    project_name = "default"
     
     try:
-        req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=30) as response:
-            content = response.read().decode("utf-8-sig")
+        import requests
         
-        if not content.strip():
-            return [], "Empty sheet content"
+        if gid:
+            export_url = f"{base_url}/export?format=csv&gid={gid}"
+            req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=30) as response:
+                content = response.read().decode("utf-8-sig")
+            
+            if content.strip():
+                from io import StringIO
+                reader = csv.DictReader(StringIO(content))
+                for row in reader:
+                    if any(v for v in row.values()):
+                        row['_project'] = sheet_name if sheet_name else row.get('Project', 'default')
+                        all_records.append(row)
+                project_name = sheet_name if sheet_name else 'default'
+        else:
+            spreadsheet_id = base_url.split('/d/')[1].split('/')[0] if '/d/' in base_url else None
+            if spreadsheet_id:
+                metadata_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/?alt=json"
+                req = urllib.request.Request(metadata_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    import json
+                    metadata = json.loads(response.read().decode("utf-8"))
+                    sheets = metadata.get('feed', {}).get('entry', [])
+                
+                for sheet in sheets:
+                    sheet_title = sheet.get('title', {}).get('$t', '')
+                    gid_match = re.search(r'gid=(\d+)', sheet.get('link', ''))
+                    sheet_gid = gid_match.group(1) if gid_match else None
+                    
+                    if sheet_gid:
+                        export_url = f"{base_url}/export?format=csv&gid={sheet_gid}"
+                        req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
+                        with urllib.request.urlopen(req, timeout=30) as response:
+                            content = response.read().decode("utf-8-sig")
+                        
+                        if content.strip():
+                            from io import StringIO
+                            reader = csv.DictReader(StringIO(content))
+                            for row in reader:
+                                if any(v for v in row.values()):
+                                    row['_project'] = sheet_title
+                                    all_records.append(row)
         
-        from io import StringIO
-        reader = csv.DictReader(StringIO(content))
-        records = []
-        for row in reader:
-            if any(v for v in row.values()):
-                records.append(row)
-        
-        if not records:
+        if not all_records:
             return [], "No records found in sheet"
         
-        return records, gid
-    except urllib.error.HTTPError as e:
-        return [], f"HTTP Error: {e.code} - {e.reason}"
+        return all_records, project_name
     except Exception as e:
         return [], str(e)
 
@@ -175,8 +204,12 @@ def extract_id(row):
         if val:
             return str(val).lstrip("#").strip()
     for k, v in row.items():
-        if v and isinstance(v, str) and re.match(r"#?\s*WOTASD-\d+", v.strip(), re.I):
-            return str(v).lstrip("#").strip()
+        if v and isinstance(v, str):
+            match = re.match(r"#?\s*([A-Z]+-\d+)", v.strip(), re.I)
+            if match:
+                return match.group(1).strip()
+            if re.match(r"#?\s*\w+-\d+", v.strip()):
+                return str(v).lstrip("#").strip()
     return ""
 
 
@@ -427,7 +460,7 @@ def get_projects(db):
     return list(projects.values())
 
 
-def import_records_to_db(records, project):
+def import_records_to_db(records, project=None):
     db = load_db()
     new_count = 0
     updated_count = 0
@@ -439,25 +472,31 @@ def import_records_to_db(records, project):
         if not raw_id:
             continue
         current_ids.add(raw_id)
-        rec = {**row, "imported": True, "Project": project}
+        
+        proj = row.get("_project") or project or "default"
+        rec = {**row, "imported": True, "Project": proj}
 
         if raw_id in db:
             existing_env = db[raw_id].get("Environment", "")
             existing_eta = db[raw_id].get("ETA", "")
+            existing_project = db[raw_id].get("Project", "")
             db[raw_id] = {**db[raw_id], **rec}
             if existing_env:
                 db[raw_id]["Environment"] = existing_env
             if existing_eta:
                 db[raw_id]["ETA"] = existing_eta
+            if existing_project:
+                db[raw_id]["Project"] = existing_project
             updated_count += 1
         else:
             db[raw_id] = rec
             new_count += 1
 
+    project_lower = project.lower() if project else "default"
     for tid, data in db.items():
         if tid.startswith("_"):
             continue
-        if data.get("Project", "").lower() != project.lower():
+        if (data.get("Project") or "default").lower() != project_lower:
             continue
         if tid not in current_ids:
             missing_ids.append({**data, "tid": tid})

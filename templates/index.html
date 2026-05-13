@@ -225,10 +225,12 @@
         async function doGSheetImport() {
             const url = document.getElementById('gsUrl').value;
             if (!url) return showToast('Enter sheet URL');
+            const projectInput = document.getElementById('gsProject').value;
+            const project = projectInput ? projectInput.trim() : '';
             const res = await fetch('/api/gsheet/import', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ url, project: document.getElementById('gsProject').value || 'default' })
+                body: JSON.stringify({ url, project: project })
             });
             const data = await res.json();
             if (data.success) {
