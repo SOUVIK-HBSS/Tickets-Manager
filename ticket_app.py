@@ -133,21 +133,20 @@ def read_gsheet_public(url, sheet_name=""):
     gid_match = re.search(r'gid=(\d+)', url)
     provided_gid = gid_match.group(1) if gid_match else None
     
-    if "/edit" in url or "/view" in url:
-        url = re.sub(r"/(edit|view).*", "", url)
+    url = re.sub(r'/edit.*', '', url)
+    url = re.sub(r'/view.*', '', url)
+    url = url.rstrip('/')
     
-    base_url = url.rstrip("/")
-    spreadsheet_id = base_url.split("/d/")[-1] if "/d/" in base_url else None
+    if '/d/' not in url:
+        return [], "Invalid spreadsheet URL"
     
-    if not spreadsheet_id:
-        return [], "Invalid URL"
+    spreadsheet_id = url.split('/d/')[1].split('/')[0]
     
     all_records = []
-    project_name = sheet_name if sheet_name else "default"
     
     try:
         if provided_gid:
-            export_url = f"{base_url}/export?format=csv&gid={provided_gid}"
+            export_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={provided_gid}"
             req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=30) as response:
                 content = response.read().decode("utf-8-sig")
@@ -157,28 +156,31 @@ def read_gsheet_public(url, sheet_name=""):
                 reader = csv.DictReader(StringIO(content))
                 for row in reader:
                     if any(v for v in row.values()):
+                        row['_project'] = sheet_name if sheet_name else row.get('Project', 'default')
                         all_records.append(row)
         else:
-            html_url = base_url + "/viewhtml"
-            req = urllib.request.Request(html_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=30) as response:
-                html_content = response.read().decode("utf-8")
-            
-            sheet_pattern = r'/export\?format=csv&gid=(\d+)'
-            sheet_gids = re.findall(sheet_pattern, html_content)
-            
-            title_pattern = r'<a[^>]*href="[^"]*gid=(\d+)"[^>]*>([^<]+)</a>'
-            titles = re.findall(title_pattern, html_content)
-            
-            title_map = {gid: title.strip() for gid, title in titles if gid in sheet_gids}
-            
-            if not sheet_gids:
-                sheet_gids = ['0']
-                title_map = {'0': 'default'}
-            
-            for gid in sheet_gids:
-                sheet_title = title_map.get(gid, f"sheet_{gid}")
-                export_url = f"{base_url}/export?format=csv&gid={gid}"
+            feed_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/gviz/tq"
+            req = urllib.request.Request(feed_url, headers={"User-Agent": "Mozilla/5.0"})
+            try:
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    content = response.read().decode("utf-8")
+                
+                table_match = re.search(r'TABLE\[(.*?)\]\[(.*?)\];', content, re.DOTALL)
+                if table_match:
+                    cols_str = table_match.group(1)
+                    rows_str = table_match.group(2)
+                    
+                    cols_match = re.findall(r'"([^"]+)"', cols_str)
+                    rows = re.findall(r'\[(.*?)\]', rows_str)
+                    
+                    for row_str in rows:
+                        values = re.findall(r'"([^"]*)"', row_str)
+                        if len(values) >= len(cols_match):
+                            row = dict(zip(cols_match, values))
+                            if any(v for v in row.values()):
+                                all_records.append(row)
+            except:
+                export_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv"
                 req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
                 with urllib.request.urlopen(req, timeout=30) as response:
                     content = response.read().decode("utf-8-sig")
@@ -188,13 +190,13 @@ def read_gsheet_public(url, sheet_name=""):
                     reader = csv.DictReader(StringIO(content))
                     for row in reader:
                         if any(v for v in row.values()):
-                            row['_project'] = sheet_title
+                            row['_project'] = sheet_name if sheet_name else 'default'
                             all_records.append(row)
         
         if not all_records:
-            return [], "No records found in sheet"
+            return [], "No records found"
         
-        return all_records, project_name
+        return all_records, sheet_name if sheet_name else "default"
     except Exception as e:
         return [], str(e)
 
