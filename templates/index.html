@@ -98,7 +98,7 @@
         
         let currentProjectFilter = 'all';
         let showOpenOnly = false;
-        let openFilterCriteria = {{ db._settings.openFilterCriteria if db._settings else [] }};
+        let openFilterCriteria = {{ open_filter_criteria | tojson }};
         
         const defaultColumns = [
             { key: 'Sn', label: '#', width: 40 },

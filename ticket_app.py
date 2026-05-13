@@ -522,7 +522,9 @@ def index():
     db = load_db()
     gsheet_links = load_gsheet_links()
     presets = list(PRESETS.keys())
-    current_fmt = db.get("_settings", {}).get("ppt_format", "default")
+    settings = db.get("_settings", {})
+    current_fmt = settings.get("ppt_format", "default")
+    open_filter_criteria = settings.get("openFilterCriteria", [])
     projects = get_projects(db)
     return render_template(
         "index.html",
@@ -531,6 +533,7 @@ def index():
         presets=presets,
         current_fmt=current_fmt,
         gsheet_links=gsheet_links,
+        open_filter_criteria=open_filter_criteria,
         STATUS_COLORS=json.dumps(STATUS_COLORS),
         SEVERITY_COLORS=json.dumps(SEVERITY_COLORS),
         ENV_COLORS=json.dumps(ENV_COLORS),
