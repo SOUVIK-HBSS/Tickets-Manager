@@ -145,56 +145,27 @@ def read_gsheet_public(url, sheet_name=""):
     all_records = []
     
     try:
+        export_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv"
         if provided_gid:
-            export_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={provided_gid}"
-            req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=30) as response:
-                content = response.read().decode("utf-8-sig")
-            
-            if content.strip():
-                from io import StringIO
-                reader = csv.DictReader(StringIO(content))
-                for row in reader:
-                    if any(v for v in row.values()):
-                        row['_project'] = sheet_name if sheet_name else row.get('Project', 'default')
-                        all_records.append(row)
-        else:
-            feed_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/gviz/tq"
-            req = urllib.request.Request(feed_url, headers={"User-Agent": "Mozilla/5.0"})
-            try:
-                with urllib.request.urlopen(req, timeout=30) as response:
-                    content = response.read().decode("utf-8")
-                
-                table_match = re.search(r'TABLE\[(.*?)\]\[(.*?)\];', content, re.DOTALL)
-                if table_match:
-                    cols_str = table_match.group(1)
-                    rows_str = table_match.group(2)
-                    
-                    cols_match = re.findall(r'"([^"]+)"', cols_str)
-                    rows = re.findall(r'\[(.*?)\]', rows_str)
-                    
-                    for row_str in rows:
-                        values = re.findall(r'"([^"]*)"', row_str)
-                        if len(values) >= len(cols_match):
-                            row = dict(zip(cols_match, values))
-                            if any(v for v in row.values()):
-                                all_records.append(row)
-            except:
-                export_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv"
-                req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req, timeout=30) as response:
-                    content = response.read().decode("utf-8-sig")
-                
-                if content.strip():
-                    from io import StringIO
-                    reader = csv.DictReader(StringIO(content))
-                    for row in reader:
-                        if any(v for v in row.values()):
-                            row['_project'] = sheet_name if sheet_name else 'default'
-                            all_records.append(row)
+            export_url += f"&gid={provided_gid}"
+        
+        req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as response:
+            content = response.read().decode("utf-8-sig")
+        
+        if not content.strip():
+            return [], "Empty sheet content"
+        
+        from io import StringIO
+        reader = csv.DictReader(StringIO(content))
+        for row in reader:
+            if any(v for v in row.values()):
+                proj = sheet_name if sheet_name else row.get('Project', 'default')
+                row['_project'] = proj
+                all_records.append(row)
         
         if not all_records:
-            return [], "No records found"
+            return [], "No records found in sheet"
         
         return all_records, sheet_name if sheet_name else "default"
     except Exception as e:
@@ -208,7 +179,18 @@ def extract_id(row):
         v_str = str(v).strip()
         if not v_str:
             continue
-        if k.lower() in ['id', '#', 'ticket id', 'ticketid']:
+        if k.lower() == 'id':
+            cleaned = v_str.lstrip('#').strip()
+            if re.match(r'\w+-\d+', cleaned, re.I):
+                return cleaned
+    
+    for k, v in row.items():
+        if not v:
+            continue
+        v_str = str(v).strip()
+        if not v_str:
+            continue
+        if k.lower() in ['#', 'ticket id', 'ticketid']:
             cleaned = v_str.lstrip('#').strip()
             if re.match(r'\w+-\d+', cleaned, re.I):
                 return cleaned
