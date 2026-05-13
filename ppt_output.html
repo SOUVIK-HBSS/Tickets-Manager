@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ticket Status Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a0a0a;
+  color: #e9ecef;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  padding: 40px;
+}
+h1 {
+  color: #da77f2;
+  font-size: 28px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+.subtitle {
+  color: #868e96;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+.ticket-row {
+  display: flex;
+  gap: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid #1a1a2e;
+  font-size: 14px;
+  align-items: center;
+}
+.ticket-row:hover {
+  background: #111827;
+}
+.ticket-row:first-of-type {
+  border-top: 2px solid #da77f2;
+  border-bottom: 2px solid #da77f2;
+  padding: 10px 0;
+  font-weight: 600;
+  color: #868e96;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.sn { width: 40px; color: #495057; flex-shrink: 0; }
+.id { width: 160px; flex-shrink: 0; font-family: Consolas, 'Courier New', monospace; font-size: 13px; }
+.title { flex: 2; min-width: 200px; color: #e9ecef; }
+.issue-type { width: 130px; flex-shrink: 0; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.status { width: 180px; flex-shrink: 0; font-weight: 500; font-size: 13px; }
+.env { width: 60px; flex-shrink: 0; font-weight: 600; font-size: 12px; text-align: center; }
+.eta { width: 60px; flex-shrink: 0; font-size: 12px; text-align: center; }
+.severity { width: 90px; flex-shrink: 0; font-size: 12px; }
+.owner { width: 140px; flex-shrink: 0; color: #adb5bd; font-size: 13px; }
+.footer {
+  margin-top: 30px;
+  color: #495057;
+  font-size: 12px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<h1>Ticket Status Report</h1>
+<div class="subtitle">Generated: 2026-05-13 15:37</div>
+<div class="ticket-row">
+  <span class="sn">#</span>
+  <span class="id">Ticket ID</span>
+  <span class="title">Title</span>
+  <span class="issue-type">Issue Type</span>
+  <span class="status">Status</span>
+  <span class="env">Env</span>
+  <span class="eta">ETA</span>
+  <span class="severity">Severity</span>
+  <span class="owner">Owner</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">1</span>
+  <span class="id" style="color:#da77f2">WOTASD-734003</span>
+  <span class="title">WES-70 - Rider Card for Clients</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffd43b">Need info from Client</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">2</span>
+  <span class="id" style="color:#da77f2">WOTASD-734004</span>
+  <span class="title">WES-117 - New ticket re WES-99, Late trips on D360 not working</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#51cf66">Client to Validate & Close</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">DUSHALA VERMA</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">3</span>
+  <span class="id" style="color:#da77f2">WOTASD-734008</span>
+  <span class="title">WES-134 - Trips keep not showing up in trips management</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffc078">SE-WIP</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">DUSHALA VERMA</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">4</span>
+  <span class="id" style="color:#da77f2">WOTASD-734009</span>
+  <span class="title">WES-151 - EPAD: Rider Card (Performance Screen)</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffd43b">Need info from Client</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">DUSHALA VERMA</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">5</span>
+  <span class="id" style="color:#da77f2">WOTASD-734010</span>
+  <span class="title">WES-156 - GSE - Code upgrade for error handling</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffc078">SE-WIP</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">6</span>
+  <span class="id" style="color:#da77f2">WOTASD-734014</span>
+  <span class="title">WES-180 - ETA</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">Open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Raina Sinha</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">7</span>
+  <span class="id" style="color:#da77f2">WOTASD-734016</span>
+  <span class="title">WES-189 - Epad is showing a different PU window for some riders</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#51cf66">Client to Validate & Close</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">8</span>
+  <span class="id" style="color:#da77f2">WOTASD-734018</span>
+  <span class="title">WES-192 - Information being removed from new client profiles after it has been saved</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffc078">SE-WIP</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">9</span>
+  <span class="id" style="color:#da77f2">WOTASD-734019</span>
+  <span class="title">WES-193 - EPAD Automated Callout Real Time Calculation according to PICKUP_WINDOW instead of START TIME</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffc078">SE-WIP</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Raina Sinha</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">10</span>
+  <span class="id" style="color:#da77f2">WOTASD-734020</span>
+  <span class="title">WES-194 - Notes being cut off on driver tablets.</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#51cf66">L3-WIP</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">DUSHALA VERMA</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">11</span>
+  <span class="id" style="color:#da77f2">WOTASD-734021</span>
+  <span class="title">WES-199 - ARC</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">Open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Pankaj Kumar</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">12</span>
+  <span class="id" style="color:#da77f2">WOTASD-734022</span>
+  <span class="title">WES-201 - Call Out from EPAD</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffc078">SE-WIP</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">13</span>
+  <span class="id" style="color:#da77f2">WOTASD-734023</span>
+  <span class="title">WES-202 - Times not calculating correctly in Trip Scheduling</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffd43b">Need info from Client</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">DUSHALA VERMA</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">14</span>
+  <span class="id" style="color:#da77f2">WOTASD-734024</span>
+  <span class="title">WES-203 - Update Address Text: Replace "DR" with "DRIVE</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffa8cc">TM to assign DEV</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">15</span>
+  <span class="id" style="color:#da77f2">WOTASD-734025</span>
+  <span class="title">WES-204 - Update Return Leg Time Window from PRM +15 Minutes to PRM +30 Minutes</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#9775fa">L2 - Resolution WIP</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#ff8c00">Critical</span>
+  <span class="owner">Nilabha  Datta</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">16</span>
+  <span class="id" style="color:#da77f2">WOTASD-734027</span>
+  <span class="title">WES-208 - Late ETAs are not showing up in red</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#51cf66">Client to Validate & Close</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">17</span>
+  <span class="id" style="color:#da77f2">WOTASD-734030</span>
+  <span class="title">WES-212 - A trip was made and shows no information in the audit log and was not scheduled when GSE was ran</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">Open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">18</span>
+  <span class="id" style="color:#da77f2">WOTASD-734146</span>
+  <span class="title">WES-227 -  rider showing a $4 charge on their standing trip when they are under local and should be a $2 charge</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffc078">SE-WIP</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Nilabha  Datta</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">19</span>
+  <span class="id" style="color:#da77f2">WOTASD-734147</span>
+  <span class="title">WES-226 - Enable Credit Feature on WOTA STG same as OPC STG</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">20</span>
+  <span class="id" style="color:#da77f2">WOTASD-734150</span>
+  <span class="title">WES-224 - Emergency Contact not saving again'</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">21</span>
+  <span class="id" style="color:#da77f2">WOTASD-734151</span>
+  <span class="title">WES-219 - SO trips can no longer be scheduled 5 years out.</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">22</span>
+  <span class="id" style="color:#da77f2">WOTASD-734205</span>
+  <span class="title">Updating an address took out client information</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#ffa94d">Medium</span>
+  <span class="owner">Nilabha  Datta</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">23</span>
+  <span class="id" style="color:#da77f2">WOTASD-734238</span>
+  <span class="title">New client registrations are disappearing</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Sudhanshu Pandey</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">24</span>
+  <span class="id" style="color:#da77f2">WOTASD-734245</span>
+  <span class="title">Clients not receiving SMS messages</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#ffc078">SE-WIP</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#ff6347">High</span>
+  <span class="owner">Souvik Biswas</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">25</span>
+  <span class="id" style="color:#da77f2">WOTASD-734250</span>
+  <span class="title">Changes in Vehicle Inspection</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Prabhat Mehta</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">26</span>
+  <span class="id" style="color:#da77f2">WOTASD-734256</span>
+  <span class="title">Qryde changing No Show status</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#ff6347">High</span>
+  <span class="owner">Sudhanshu Pandey</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">27</span>
+  <span class="id" style="color:#da77f2">WOTASD-734299</span>
+  <span class="title">Bad segment title</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Sudhanshu Pandey</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">28</span>
+  <span class="id" style="color:#da77f2">WOTASD-734311</span>
+  <span class="title">Vehicle Inspection Report Duplicate Entries</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Sudhanshu Pandey</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">29</span>
+  <span class="id" style="color:#da77f2">WOTASD-734360</span>
+  <span class="title">WES-191- PU window is not accurate again</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Sudhanshu Pandey</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">30</span>
+  <span class="id" style="color:#da77f2">WOTASD-734363</span>
+  <span class="title">360 not showing active drivers</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#ff6b6b">Blocker</span>
+  <span class="owner">Sudhanshu Pandey</span>
+</div>
+<div class="ticket-row">
+  <span class="sn">31</span>
+  <span class="id" style="color:#da77f2">WOTASD-734387</span>
+  <span class="title">Logistics Manager</span>
+  <span class="issue-type" style="color:#e9ecef"></span>
+  <span class="status" style="color:#4dabf7">open</span>
+  <span class="env" style="color:#e9ecef"></span>
+  <span class="eta" style="color:#e9ecef"></span>
+  <span class="severity" style="color:#69db7c">Low</span>
+  <span class="owner">Sudhanshu Pandey</span>
+</div>
+<div class="footer">Ticket Status Report &bull; Total: 31 tickets</div>
+</body>
+</html>

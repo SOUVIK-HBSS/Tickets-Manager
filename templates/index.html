@@ -7,27 +7,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #111827;
-            --bg-tertiary: #1a1a2e;
-            --text-primary: #e9ecef;
-            --text-secondary: #868e96;
-            --accent: #da77f2;
-            --accent-hover: #c061de;
-            --border: #2d2d44;
-        }
+        :root { --bg-primary: #0a0a0a; --bg-secondary: #111827; --bg-tertiary: #1a1a2e; --text-primary: #e9ecef; --text-secondary: #868e96; --accent: #da77f2; --accent-hover: #c061de; --border: #2d2d44; }
         body { background: var(--bg-primary); color: var(--text-primary); font-family: 'Segoe UI', Arial, sans-serif; }
         .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); }
         .nav-item { padding: 10px 16px; cursor: pointer; transition: all 0.2s; border-left: 3px solid transparent; font-size: 14px; }
         .nav-item:hover { background: var(--bg-tertiary); }
         .nav-item.active { background: var(--bg-tertiary); border-left-color: var(--accent); }
-        .btn { padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s; border: none; font-weight: 500; font-size: 13px; }
+        .btn { padding: 6px 12px; border-radius: 4px; cursor: pointer; border: none; font-weight: 500; font-size: 13px; }
         .btn-primary { background: var(--accent); color: white; }
-        .btn-primary:hover { background: var(--accent-hover); }
         .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
-        .btn-secondary:hover { background: #252540; }
-        .btn-sm { padding: 4px 8px; font-size: 12px; }
         .input { background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-primary); padding: 6px 10px; border-radius: 4px; font-size: 13px; }
         .input:focus { outline: none; border-color: var(--accent); }
         .modal { background: rgba(0,0,0,0.8); position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 100; }
@@ -40,25 +28,22 @@
         .toast.show { transform: translateY(0); }
         
         .ticket-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .ticket-table th { 
-            padding: 8px 10px; text-align: left; font-weight: 600; text-transform: uppercase; font-size: 10px; 
-            letter-spacing: 0.5px; color: var(--text-secondary); border-bottom: 2px solid var(--accent); 
-            position: relative; cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .ticket-table th:hover { color: var(--accent); }
-        .ticket-table th .resize-handle { 
-            position: absolute; right: 0; top: 0; bottom: 0; width: 5px; cursor: col-resize; 
-        }
-        .ticket-table td { 
-            padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 12px; 
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
+        .ticket-table th { padding: 8px 6px; text-align: left; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; color: var(--text-secondary); border-bottom: 2px solid var(--accent); position: relative; user-select: none; white-space: nowrap; }
+        .ticket-table th:hover { background: var(--bg-tertiary); }
+        .ticket-table td { padding: 4px 6px; border-bottom: 1px solid var(--border); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .ticket-table tr:hover td { background: var(--bg-tertiary); }
         
-        .filter-row { display: flex; gap: 8px; padding: 8px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
-        .filter-input { width: 120px; }
+        .filter-row { display: flex; gap: 4px; padding: 6px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+        .filter-input { }
         
-        .compact-row td { padding: 4px 8px; font-size: 11px; }
+        .resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 8px; cursor: col-resize; background: transparent; }
+        .resize-handle:hover { background: var(--accent); }
+        
+        .filter-dropdown { position: relative; display: inline-block; }
+        .filter-dropdown-content { display: none; position: absolute; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px; padding: 8px; max-height: 200px; overflow-y: auto; z-index: 10; min-width: 150px; }
+        .filter-dropdown:hover .filter-dropdown-content { display: block; }
+        .filter-option { display: flex; align-items: center; gap: 4px; padding: 4px; font-size: 12px; }
+        .filter-option:hover { background: var(--bg-tertiary); }
     </style>
 </head>
 <body class="h-screen flex">
@@ -70,7 +55,8 @@
             <div class="nav-item active" data-view="tickets"><i class="fas fa-list mr-2 w-4"></i>All Tickets</div>
             <div class="nav-item" data-view="import"><i class="fas fa-file-import mr-2 w-4"></i>Import</div>
             <div class="nav-item" data-view="generate"><i class="fas fa-file-export mr-2 w-4"></i>Generate</div>
-            <div class="nav-item" data-view="gsheet"><i class="fas fa-google mr-2 w-4"></i>Google Sheets</div>
+            <div class="nav-item" data-view="gsheet"><i class="fas fa-google mr-2 w-4"></i>Projects</div>
+            <div class="nav-item" data-view="rawpaste"><i class="fas fa-paste mr-2 w-4"></i>Raw Data</div>
             <div class="nav-item" data-view="settings"><i class="fas fa-cog mr-2 w-4"></i>Settings</div>
         </div>
         <div class="p-3 border-t border-[#2d2d44] text-xs text-[#868e96]">
@@ -109,33 +95,31 @@
         let projects = {{ projects | tojson }};
         let presets = {{ presets | tojson }};
         let currentFmt = {{ current_fmt | tojson }};
-        let gsheetLinks = {{ gsheet_links | tojson }};
         
         let currentProjectFilter = 'all';
         let showOpenOnly = false;
-        let openFilterCriteria = [];
+        let openFilterCriteria = {{ db._settings.openFilterCriteria if db._settings else [] }};
         
         const defaultColumns = [
             { key: 'Sn', label: '#', width: 40 },
-            { key: 'ID', label: 'ID', width: 120 },
-            { key: 'Title', label: 'Title', width: 200 },
-            { key: 'Issue Type', label: 'Type', width: 90 },
-            { key: 'Status', label: 'Status', width: 100 },
-            { key: 'Environment', label: 'Env', width: 60 },
-            { key: 'ETA', label: 'ETA', width: 70 },
-            { key: 'Severity', label: 'Sev', width: 60 },
-            { key: 'Owner', label: 'Owner', width: 100 }
+            { key: 'ID', label: 'ID', width: 110 },
+            { key: 'Title', label: 'Title', width: 180 },
+            { key: 'Issue Type', label: 'Type', width: 80 },
+            { key: 'Status', label: 'Status', width: 90 },
+            { key: 'Environment', label: 'Env', width: 55 },
+            { key: 'ETA', label: 'ETA', width: 65 },
+            { key: 'Severity', label: 'Sev', width: 55 },
+            { key: 'Owner', label: 'Owner', width: 90 }
         ];
         
         let columns = JSON.parse(localStorage.getItem('ticketColumns')) || defaultColumns;
         let columnFilters = {};
+        let resizingCol = null, startX = 0, startWidth = 0;
         
         function getColor(type, value) {
             const colors = { status: STATUS_COLORS, severity: SEVERITY_COLORS, env: ENV_COLORS, issue: ISSUE_COLORS }[type] || {};
             const vl = (value || '').toLowerCase();
-            for (const [k, v] of Object.entries(colors)) {
-                if (vl.includes(k)) return v;
-            }
+            for (const [k, v] of Object.entries(colors)) { if (vl.includes(k)) return v; }
             return '#e9ecef';
         }
         
@@ -150,7 +134,8 @@
             currentView = view;
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
-            document.getElementById('viewTitle').textContent = { tickets: 'All Tickets', import: 'Import', generate: 'Generate', gsheet: 'Google Sheets', settings: 'Settings' }[view];
+            const titles = { tickets: 'All Tickets', import: 'Import', generate: 'Generate', gsheet: 'Projects', rawpaste: 'Raw Data', settings: 'Settings' };
+            document.getElementById('viewTitle').textContent = titles[view] || view;
             renderView(view);
         }
         
@@ -162,87 +147,79 @@
                 case 'tickets': renderTickets(container); break;
                 case 'import': renderImport(container); break;
                 case 'generate': renderGenerate(container); break;
-                case 'gsheet': renderGSheet(container); break;
+                case 'gsheet': renderProjects(container); break;
+                case 'rawpaste': renderRawPaste(container); break;
                 case 'settings': renderSettings(container); break;
             }
         }
         
         function isOpenTicket(ticket) {
-            if (!openFilterCriteria.length) {
+            if (!openFilterCriteria || !openFilterCriteria.length) {
                 const openStatuses = ['open', 'se-wip', 'l1-wip', 'l2', 'l3', 'l3-wip', 'tm to assign', 'need info', 'need info from client'];
                 return openStatuses.includes((ticket.Status || '').toLowerCase());
             }
             for (const crit of openFilterCriteria) {
                 const val = (ticket[crit.field] || '').toLowerCase();
-                if (crit.operator === 'contains') {
-                    if (val.includes(crit.value.toLowerCase())) return true;
-                } else if (crit.operator === 'equals') {
-                    if (val === crit.value.toLowerCase()) return true;
-                } else if (crit.operator === 'not_equals') {
-                    if (val !== crit.value.toLowerCase()) return true;
-                } else if (crit.operator === 'empty') {
-                    if (!val) return true;
-                } else if (crit.operator === 'not_empty') {
-                    if (val) return true;
-                }
+                const critVal = (crit.value || '').toLowerCase();
+                if (crit.operator === 'contains' && val.includes(critVal)) return true;
+                if (crit.operator === 'equals' && val === critVal) return true;
+                if (crit.operator === 'not_equals' && val !== critVal) return true;
+                if (crit.operator === 'empty' && !val) return true;
+                if (crit.operator === 'not_empty' && val) return true;
             }
             return false;
         }
         
         function toggleOpenFilter() {
             showOpenOnly = !showOpenOnly;
-            document.getElementById('filterOpenBtn').classList.toggle('active', showOpenOnly);
-            document.getElementById('filterOpenBtn').style.background = showOpenOnly ? 'var(--accent)' : '';
+            const btn = document.getElementById('filterOpenBtn');
+            btn.classList.toggle('active', showOpenOnly);
+            btn.style.background = showOpenOnly ? 'var(--accent)' : '';
+            btn.style.color = showOpenOnly ? 'white' : '';
             renderTickets(document.getElementById('mainContent'));
-        }
-        
-        function parseTextSnippet(text, ticket) {
-            const lines = text.split('\n');
-            const envMatch = text.match(/(STG|staging|prod|live|production|TBD)/i);
-            const etaMatch = text.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2})/);
-            const issueMatch = text.match(/(bug|feature|enhancement|hotfix|documentation|other)/i);
-            
-            if (envMatch) ticket.Environment = envMatch[1].toUpperCase().replace('STAGING', 'STG').replace('PRODUCTION', 'PROD').replace('LIVE', 'PROD');
-            if (etaMatch) ticket.ETA = etaMatch[1];
-            if (issueMatch) ticket['Issue Type'] = issueMatch[1].charAt(0).toUpperCase() + issueMatch[1].slice(1);
-            return ticket;
         }
         
         function renderTickets(container) {
             const allTickets = Object.entries(db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
             
-            let filtered = currentProjectFilter === 'all' 
-                ? allTickets 
-                : allTickets.filter(t => (t.Project || 'default').toLowerCase() === currentProjectFilter);
+            let filtered = currentProjectFilter === 'all' ? allTickets : allTickets.filter(t => (t.Project || 'default').toLowerCase() === currentProjectFilter);
             
-            if (showOpenOnly) {
-                filtered = filtered.filter(isOpenTicket);
-            }
+            if (showOpenOnly) filtered = filtered.filter(isOpenTicket);
             
-            for (const [key, val] of Object.entries(columnFilters)) {
-                if (val) {
-                    filtered = filtered.filter(t => {
-                        const v = (t[key] || '').toString().toLowerCase();
-                        return v.includes(val.toLowerCase());
-                    });
+            for (const [key, vals] of Object.entries(columnFilters)) {
+                if (vals && vals.length > 0) {
+                    filtered = filtered.filter(t => vals.includes((t[key] || '').toLowerCase()) || (!t[key] && vals.includes('')));
                 }
             }
             
-            const projectTabs = ['all', ...projects.map(p => p.id)];
+            const projectTabs = ['all', ...new Set(allTickets.map(t => (t.Project || 'default').toLowerCase()))];
             
             let html = `
-                <div class="flex gap-2 mb-2 border-b border-[#2d2d44] pb-2 overflow-x-auto">
+                <div class="flex gap-1 mb-2 border-b border-[#2d2d44] pb-2 overflow-x-auto">
                     ${projectTabs.map(p => `
-                        <button class="tab-btn ${currentProjectFilter === p ? 'active' : ''}" onclick="filterByProject('${p}')">${p === 'all' ? 'All' : p}</button>
+                        <button class="tab-btn ${currentProjectFilter === p ? 'active' : ''}" onclick="filterByProject('${p}')">
+                            ${p === 'all' ? 'All' : p} <i class="fas fa-edit text-[10px] ml-1" onclick="event.stopPropagation(); renameProject('${p}')"></i>
+                        </button>
                     `).join('')}
                 </div>
                 <div class="filter-row">
-                    ${columns.map(col => `
-                        <input type="text" class="input filter-input" placeholder="${col.label}" 
-                            style="width:${col.width}px" 
-                            value="${columnFilters[col.key] || ''}"
-                            onchange="setFilter('${col.key}', this.value)">
+                    ${columns.filter(c => c.key !== 'Sn').map(col => `
+                        <div class="filter-dropdown">
+                            <button class="btn btn-secondary btn-sm" style="min-width:${col.width}px">
+                                ${col.label} ${columnFilters[col.key]?.length ? `(${columnFilters[col.key].length})` : ''} <i class="fas fa-caret-down ml-1"></i>
+                            </button>
+                            <div class="filter-dropdown-content">
+                                ${getUniqueValues(col.key).map(v => `
+                                    <label class="filter-option">
+                                        <input type="checkbox" ${(columnFilters[col.key] || []).includes(v) ? 'checked' : ''} 
+                                            onchange="toggleFilter('${col.key}', '${v}', this.checked)">
+                                        ${v || '(empty)'}
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
                     `).join('')}
+                    <button class="btn btn-secondary btn-sm ml-2" onclick="clearFilters()">Clear</button>
                 </div>
             `;
             
@@ -251,11 +228,14 @@
             } else {
                 html += `<table class="ticket-table"><thead><tr>`;
                 html += columns.map(col => `
-                    <th style="width:${col.width}px" onmousedown="startResize(event, '${col.key}')" onclick="sortBy('${col.key}')">${col.label}</th>
+                    <th style="width:${col.width}px" onmousedown="startResize(event, '${col.key}')">
+                        ${col.label}
+                        <div class="resize-handle"></div>
+                    </th>
                 `).join('');
                 html += `</tr></thead><tbody>`;
                 html += filtered.map((t, i) => `
-                    <tr class="compact-row" onclick="editTicket('${t.id}')" style="cursor:pointer">
+                    <tr onclick="editTicket('${t.id}')" style="cursor:pointer">
                         ${columns.map(col => {
                             if (col.key === 'Sn') return `<td>${i+1}</td>`;
                             if (col.key === 'ID') return `<td style="color:#da77f2;font-family:monospace">${t.id}</td>`;
@@ -275,8 +255,24 @@
             document.getElementById('filteredCount').textContent = filtered.length;
         }
         
-        function setFilter(key, value) {
-            columnFilters[key] = value;
+        function getUniqueValues(key) {
+            const allTickets = Object.entries(db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
+            const values = [...new Set(allTickets.map(t => (t[key] || '').toLowerCase()))];
+            return values.sort();
+        }
+        
+        function toggleFilter(key, value, checked) {
+            if (!columnFilters[key]) columnFilters[key] = [];
+            if (checked) {
+                if (!columnFilters[key].includes(value)) columnFilters[key].push(value);
+            } else {
+                columnFilters[key] = columnFilters[key].filter(v => v !== value);
+            }
+            renderTickets(document.getElementById('mainContent'));
+        }
+        
+        function clearFilters() {
+            columnFilters = {};
             renderTickets(document.getElementById('mainContent'));
         }
         
@@ -285,10 +281,12 @@
             renderTickets(document.getElementById('mainContent'));
         }
         
-        let resizingCol = null;
         function startResize(e, key) {
             if (e.target.classList.contains('resize-handle')) {
                 resizingCol = key;
+                startX = e.clientX;
+                const col = columns.find(c => c.key === key);
+                startWidth = col ? col.width : 100;
                 document.addEventListener('mousemove', doResize);
                 document.addEventListener('mouseup', stopResize);
             }
@@ -298,7 +296,7 @@
             if (resizingCol) {
                 const col = columns.find(c => c.key === resizingCol);
                 if (col) {
-                    col.width = Math.max(40, e.clientX - document.querySelector(`th[onclick*="${resizingCol}"]`).getBoundingClientRect().left);
+                    col.width = Math.max(40, startWidth + e.clientX - startX);
                     localStorage.setItem('ticketColumns', JSON.stringify(columns));
                     renderTickets(document.getElementById('mainContent'));
                 }
@@ -311,6 +309,107 @@
             document.removeEventListener('mouseup', stopResize);
         }
         
+        function renderProjects(container) {
+            const allTickets = Object.entries(db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
+            const projList = [...new Set(allTickets.map(t => t.Project || 'default'))];
+            
+            container.innerHTML = `
+                <div class="max-w-xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-4">
+                        <h3 class="text-sm font-semibold mb-3"><i class="fas fa-folder mr-2"></i>Projects</h3>
+                        <div class="space-y-2">
+                            ${projList.map(p => `
+                                <div class="flex gap-2 items-center bg-[#1a1a2e] p-3 rounded">
+                                    <i class="fas fa-folder text-[#da77f2]"></i>
+                                    <span class="flex-1 font-medium">${p}</span>
+                                    <button class="btn btn-secondary btn-sm" onclick="renameProject('${p}')"><i class="fas fa-edit"></i> Rename</button>
+                                    <button class="btn btn-secondary btn-sm text-red-400" onclick="deleteProject('${p}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderRawPaste(container) {
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-4">
+                        <h3 class="text-sm font-semibold mb-3"><i class="fas fa-paste mr-2"></i>Raw Data Paste</h3>
+                        <p class="text-xs text-[#868e96] mb-3">Paste text containing ticket IDs. Each ticket ID will be found and updated with extracted info.</p>
+                        <div class="space-y-3">
+                            <div><label class="block text-xs text-[#868e96] mb-1">Paste your data here</label>
+                                <textarea id="rawDataInput" class="input w-full h-64" placeholder="Paste text with ticket IDs like WOTASD-123, statuses, env, etc..."></textarea>
+                            </div>
+                            <button class="btn btn-primary w-full" onclick="processRawData()"><i class="fas fa-bolt mr-2"></i>Process & Update</button>
+                            <div id="rawPasteResults" class="text-xs text-[#868e96] mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function processRawData() {
+            const text = document.getElementById('rawDataInput').value;
+            if (!text) return showToast('Paste some data first');
+            
+            const ticketIds = [...new Set(text.match(/[A-Z]+-\d+/gi) || [])];
+            if (!ticketIds.length) return showToast('No ticket IDs found');
+            
+            let updated = 0, found = 0;
+            for (const tid of ticketIds) {
+                const ticketId = tid.toUpperCase();
+                if (db[ticketId]) {
+                    found++;
+                    let updates = {};
+                    
+                    const statusMatch = text.match(new RegExp(ticketId + '.*?(open|closed|resolved|done|se-wip|l1-wip|l2|l3|need info)', 'i'));
+                    if (statusMatch) updates.Status = statusMatch[1];
+                    
+                    const envMatch = text.match(new RegExp(ticketId + '.*?(STG|staging|prod|live|production|TBD)', 'i'));
+                    if (envMatch) updates.Environment = envMatch[1].toUpperCase().replace('STAGING', 'STG').replace('PRODUCTION', 'PROD').replace('LIVE', 'PROD');
+                    
+                    const etaMatch = text.match(new RegExp(ticketId + '.*?(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}|\\d{4}[/-]\\d{1,2}[/-]\\d{1,2})', 'i'));
+                    if (etaMatch) updates.ETA = etaMatch[1];
+                    
+                    const issueMatch = text.match(new RegExp(ticketId + '.*?(bug|feature|enhancement|hotfix|documentation)', 'i'));
+                    if (issueMatch) updates['Issue Type'] = issueMatch[1].charAt(0).toUpperCase() + issueMatch[1].slice(1);
+                    
+                    if (Object.keys(updates).length) {
+                        await fetch(`/api/ticket/${ticketId}`, {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(updates)
+                        });
+                        updated++;
+                    }
+                }
+            }
+            
+            document.getElementById('rawPasteResults').innerHTML = `Found ${found} tickets, updated ${updated}`;
+            showToast(`Found ${found} tickets, updated ${updated}`);
+            if (updated > 0) setTimeout(() => location.reload(), 1500);
+        }
+        
+        function renameProject(pid) {
+            const newName = prompt('Enter new project name:', pid);
+            if (newName && newName.trim() && newName !== pid) {
+                fetch('/api/project/rename', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ old: pid, new: newName.trim() })
+                }).then(() => location.reload());
+            }
+        }
+        
+        async function deleteProject(pid) {
+            if (confirm(`Delete project "${pid}" and all its tickets?`)) {
+                const res = await fetch(`/api/project/${pid}`, { method: 'DELETE' });
+                const data = await res.json();
+                showToast(`Deleted ${data.deleted} tickets`);
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+        
         function renderImport(container) {
             container.innerHTML = `
                 <div class="max-w-xl mx-auto space-y-4">
@@ -320,14 +419,6 @@
                             <div><label class="block text-xs text-[#868e96] mb-1">Project Name</label><input type="text" id="importProject" class="input w-full" placeholder="default"></div>
                             <div><label class="block text-xs text-[#868e96] mb-1">CSV/Excel File</label><input type="file" id="importFile" accept=".csv,.xlsx,.xls" class="input w-full"></div>
                             <button class="btn btn-primary w-full" onclick="doImport()"><i class="fas fa-upload mr-2"></i>Import</button>
-                        </div>
-                    </div>
-                    <div class="bg-[#111827] rounded-lg p-4">
-                        <h3 class="text-sm font-semibold mb-3"><i class="fab fa-google mr-2"></i>Google Sheet (Not working)</h3>
-                        <div class="space-y-3">
-                            <div><label class="block text-xs text-[#868e96] mb-1">Sheet URL</label><input type="text" id="gsUrl" class="input w-full" placeholder="URL" disabled></div>
-                            <div><label class="block text-xs text-[#868e96] mb-1">Project Name</label><input type="text" id="gsProject" class="input w-full" placeholder="optional" disabled></div>
-                            <button class="btn btn-primary w-full" disabled>Import (Disabled)</button>
                         </div>
                     </div>
                 </div>
@@ -407,53 +498,13 @@
             }
         }
         
-        function renderGSheet(container) {
-            container.innerHTML = `
-                <div class="max-w-xl mx-auto">
-                    <div class="bg-[#111827] rounded-lg p-4">
-                        <h3 class="text-sm font-semibold mb-3"><i class="fab fa-google mr-2"></i>Google Sheets</h3>
-                        <div class="text-xs text-[#868e96] mb-3">Google Sheets import is currently not working. Use CSV/Excel import instead.</div>
-                        <div class="space-y-3">
-                            ${projects.map(p => `
-                                <div class="flex gap-2 items-center">
-                                    <input type="checkbox" id="gs_${p.id}" ${p.gsheet_enabled ? 'checked' : ''} onchange="saveGSheetLinks()" disabled>
-                                    <input type="text" id="url_${p.id}" class="input flex-1" value="${p.gsheet_url || ''}" placeholder="Sheet URL" disabled>
-                                    <button class="btn btn-sm btn-secondary" onclick="renameProject('${p.id}')"><i class="fas fa-edit"></i></button>
-                                    <span class="text-xs">${p.label}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        async function saveGSheetLinks() {
-            const links = {};
-            projects.forEach(p => {
-                links[p.id] = { enabled: document.getElementById(`gs_${p.id}`)?.checked || false, url: document.getElementById(`url_${p.id}`)?.value || '' };
-            });
-            await fetch('/api/gsheet/links', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(links) });
-        }
-        
-        function renameProject(pid) {
-            const newName = prompt('Enter new project name:');
-            if (newName && newName.trim()) {
-                fetch('/api/project/rename', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ old: pid, new: newName.trim() })
-                }).then(() => location.reload());
-            }
-        }
-        
         function renderSettings(container) {
-            const savedCriteria = db._settings?.openFilterCriteria || [];
-            openFilterCriteria = savedCriteria;
+            openFilterCriteria = openFilterCriteria || [];
             
             container.innerHTML = `
                 <div class="max-w-xl mx-auto space-y-4">
                     <div class="bg-[#111827] rounded-lg p-4">
-                        <h3 class="text-sm font-semibold mb-3"><i class="fas fa-filter mr-2"></i>Open Ticket Filter Criteria</h3>
+                        <h3 class="text-sm font-semibold mb-3"><i class="fas fa-filter mr-2"></i>Open Ticket Criteria</h3>
                         <div class="space-y-2 mb-3" id="criteriaList">
                             ${openFilterCriteria.map((c, i) => `
                                 <div class="flex gap-2 items-center">
@@ -476,8 +527,10 @@
                                 </div>
                             `).join('')}
                         </div>
-                        <button class="btn btn-secondary btn-sm" onclick="addCriteria()">+ Add Criteria</button>
-                        <button class="btn btn-primary btn-sm ml-2" onclick="saveCriteria()">Save</button>
+                        <div class="flex gap-2">
+                            <button class="btn btn-secondary btn-sm" onclick="addCriteria()">+ Add</button>
+                            <button class="btn btn-primary btn-sm" onclick="saveCriteria()">Save</button>
+                        </div>
                     </div>
                     <div class="bg-[#111827] rounded-lg p-4">
                         <h3 class="text-sm font-semibold mb-3"><i class="fas fa-cog mr-2"></i>Settings</h3>
@@ -516,10 +569,9 @@
             openFilterCriteria = criteria;
             await fetch('/api/settings', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ openFilterCriteria: criteria, ppt_format: document.getElementById('defaultFmt').value })
+                body: JSON.stringify({ openFilterCriteria: criteria })
             });
             showToast('Saved');
-            location.reload();
         }
         
         async function saveSettings() {
@@ -561,8 +613,8 @@
                                 <div><label class="block text-xs text-[#868e96] mb-1">Severity</label><input type="text" id="editSev" class="input w-full" value="${t.Severity || ''}"></div>
                                 <div><label class="block text-xs text-[#868e96] mb-1">Owner</label><input type="text" id="editOwner" class="input w-full" value="${t.Owner || ''}"></div>
                             </div>
-                            <div><label class="block text-xs text-[#868e96] mb-1">Text Snippet (auto-extract env/eta/type)</label>
-                                <textarea id="editSnippet" class="input w-full h-20" placeholder="Paste text containing env, ETA, issue type..." oninput="extractFromSnippet(this.value)"></textarea>
+                            <div><label class="block text-xs text-[#868e96] mb-1">Text Snippet</label>
+                                <textarea id="editSnippet" class="input w-full h-16" placeholder="Paste text to auto-extract env, eta, type..." oninput="extractFromSnippet(this.value)"></textarea>
                             </div>
                             <div class="flex gap-2 mt-3">
                                 <button class="btn btn-primary" onclick="saveTicket('${id}')">Save</button>
@@ -578,8 +630,7 @@
         function extractFromSnippet(text) {
             const envMatch = text.match(/(STG|staging|prod|live|production|TBD)/i);
             const etaMatch = text.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2})/);
-            const issueMatch = text.match(/(bug|feature|enhancement|hotfix|documentation|other)/i);
-            
+            const issueMatch = text.match(/(bug|feature|enhancement|hotfix|documentation)/i);
             if (envMatch) document.getElementById('editEnv').value = envMatch[1].toUpperCase().replace('STAGING', 'STG').replace('PRODUCTION', 'PROD').replace('LIVE', 'PROD');
             if (etaMatch) document.getElementById('editEta').value = etaMatch[1];
             if (issueMatch) document.getElementById('editType').value = issueMatch[1].charAt(0).toUpperCase() + issueMatch[1].slice(1);
@@ -607,10 +658,6 @@
                 await fetch(`/api/ticket/${id}`, { method: 'DELETE' });
                 location.reload();
             }
-        }
-        
-        if (db._settings?.openFilterCriteria) {
-            openFilterCriteria = db._settings.openFilterCriteria;
         }
         
         showView('tickets');
