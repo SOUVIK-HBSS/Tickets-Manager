@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tickets Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1a1a2e;
+            --text-primary: #e9ecef;
+            --text-secondary: #868e96;
+            --accent: #da77f2;
+            --accent-hover: #c061de;
+            --border: #2d2d44;
+        }
+        body { background: var(--bg-primary); color: var(--text-primary); font-family: 'Segoe UI', Arial, sans-serif; }
+        .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); }
+        .nav-item { padding: 12px 16px; cursor: pointer; transition: all 0.2s; border-left: 3px solid transparent; }
+        .nav-item:hover { background: var(--bg-tertiary); }
+        .nav-item.active { background: var(--bg-tertiary); border-left-color: var(--accent); }
+        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: none; font-weight: 500; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+        .btn-secondary:hover { background: #252540; }
+        .input { background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; }
+        .input:focus { outline: none; border-color: var(--accent); }
+        .modal { background: rgba(0,0,0,0.8); position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal.show { display: flex; }
+        .modal-content { background: var(--bg-secondary); border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .ticket-row { display: grid; grid-template-columns: 40px 120px 2fr 100px 150px 80px 80px 100px; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border); align-items: center; }
+        .ticket-row:hover { background: var(--bg-tertiary); }
+        .ticket-header { font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; color: var(--text-secondary); border-bottom: 2px solid var(--accent); }
+        .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .tab-btn { padding: 10px 20px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; background: var(--accent); color: white; transform: translateY(100px); transition: transform 0.3s; }
+        .toast.show { transform: translateY(0); }
+    </style>
+</head>
+<body class="h-screen flex">
+    <div class="sidebar w-64 flex-shrink-0 flex flex-col">
+        <div class="p-4 border-b border-[#2d2d44]">
+            <h1 class="text-xl font-bold text-[#da77f2]"><i class="fas fa-ticket-alt mr-2"></i>Tickets</h1>
+        </div>
+        <div class="flex-1 overflow-y-auto py-2">
+            <div class="nav-item active" data-view="tickets"><i class="fas fa-list mr-2"></i>All Tickets</div>
+            <div class="nav-item" data-view="import"><i class="fas fa-file-import mr-2"></i>Import</div>
+            <div class="nav-item" data-view="generate"><i class="fas fa-file-export mr-2"></i>Generate Report</div>
+            <div class="nav-item" data-view="gsheet"><i class="fas fa-google mr-2"></i>Google Sheets</div>
+            <div class="nav-item" data-view="settings"><i class="fas fa-cog mr-2"></i>Settings</div>
+        </div>
+        <div class="p-4 border-t border-[#2d2d44] text-sm text-[#868e96]">
+            <div>Total: <span id="totalTickets">0</span> tickets</div>
+        </div>
+    </div>
+    
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="header p-4 border-b border-[#2d2d44] flex justify-between items-center">
+            <div>
+                <h2 class="text-lg font-semibold" id="viewTitle">All Tickets</h2>
+            </div>
+            <div class="flex gap-2">
+                <button class="btn btn-secondary" onclick="showView('import')"><i class="fas fa-plus mr-1"></i>Import</button>
+                <button class="btn btn-primary" onclick="showView('generate')"><i class="fas fa-file-export mr-1"></i>Generate</button>
+            </div>
+        </div>
+        
+        <div class="flex-1 overflow-auto p-4" id="mainContent">
+        </div>
+    </div>
+    
+    <div id="toast" class="toast">Message</div>
+
+    <script>
+        const STATUS_COLORS = {{ STATUS_COLORS | safe }};
+        const SEVERITY_COLORS = {{ SEVERITY_COLORS | safe }};
+        const ENV_COLORS = {{ ENV_COLORS | safe }};
+        const ISSUE_COLORS = {{ ISSUE_COLORS | safe }};
+        
+        let currentView = 'tickets';
+        let db = {{ db | tojson }};
+        let projects = {{ projects | tojson }};
+        let presets = {{ presets | tojson }};
+        let currentFmt = {{ current_fmt | tojson }};
+        let gsheetLinks = {{ gsheet_links | tojson }};
+        
+        function getColor(type, value) {
+            const colors = { status: STATUS_COLORS, severity: SEVERITY_COLORS, env: ENV_COLORS, issue: ISSUE_COLORS }[type] || {};
+            const vl = (value || '').toLowerCase();
+            for (const [k, v] of Object.entries(colors)) {
+                if (vl.includes(k)) return v;
+            }
+            return '#e9ecef';
+        }
+        
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+        
+        function showView(view) {
+            currentView = view;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
+            document.getElementById('viewTitle').textContent = { tickets: 'All Tickets', import: 'Import Data', generate: 'Generate Report', gsheet: 'Google Sheets', settings: 'Settings' }[view];
+            renderView(view);
+        }
+        
+        document.querySelectorAll('.nav-item').forEach(el => {
+            el.addEventListener('click', () => showView(el.dataset.view));
+        });
+        
+        function renderView(view) {
+            const container = document.getElementById('mainContent');
+            switch(view) {
+                case 'tickets': renderTickets(container); break;
+                case 'import': renderImport(container); break;
+                case 'generate': renderGenerate(container); break;
+                case 'gsheet': renderGSheet(container); break;
+                case 'settings': renderSettings(container); break;
+            }
+        }
+        
+        function renderTickets(container) {
+            const allTickets = Object.entries(db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
+            const tickets = allTickets.length ? allTickets : [{id: 'Demo-1', Title: 'No tickets yet', Status: 'Open', 'Issue Type': 'Feature', Environment: 'STG', Severity: 'Medium'}];
+            container.innerHTML = `
+                <div style="display:grid;grid-template-columns:40px 120px 2fr 100px 150px 80px 80px 100px;gap:8px;padding:12px;font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;color:#868e96;border-bottom:2px solid #da77f2;">
+                    <div>#</div><div>ID</div><div>Title</div><div>Type</div><div>Status</div><div>Env</div><div>ETA</div><div>Severity</div>
+                </div>
+                ${tickets.map((t, i) => `
+                    <div class="ticket-row" style="cursor:pointer" onclick="editTicket('${t.id}')">
+                        <div style="color:#495057">${i+1}</div>
+                        <div style="color:#da77f2;font-family:monospace;font-size:13px;">${t.id}</div>
+                        <div>${(t.Title || '').replace(/"/g, '')}</div>
+                        <div><span class="badge" style="background:${getColor('issue', t['Issue Type'])}20;color:${getColor('issue', t['Issue Type'])}">${t['Issue Type'] || '-'}</span></div>
+                        <div><span class="badge" style="background:${getColor('status', t.Status)}20;color:${getColor('status', t.Status)}">${t.Status || '-'}</span></div>
+                        <div style="color:${getColor('env', t.Environment)};font-weight:600;font-size:12px;text-align:center">${t.Environment || '-'}</div>
+                        <div style="font-size:12px;text-align:center">${t.ETA || '-'}</div>
+                        <div style="color:${getColor('severity', t.Severity)};font-size:12px">${(t.Severity || '').toLowerCase()}</div>
+                    </div>
+                `).join('')}
+            `;
+            document.getElementById('totalTickets').textContent = allTickets.length;
+        }
+        
+        function renderImport(container) {
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-file-csv mr-2"></i>Import from File</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">Project Name</label>
+                                <input type="text" id="importProject" class="input w-full" placeholder="default">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">Environment (for batch)</label>
+                                <select id="importEnv" class="input w-full">
+                                    <option>STG</option>
+                                    <option>Production</option>
+                                    <option>TBD</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">CSV/Excel File</label>
+                                <input type="file" id="importFile" accept=".csv,.xlsx,.xls" class="input w-full">
+                            </div>
+                            <button class="btn btn-primary w-full" onclick="doImport()"><i class="fas fa-upload mr-2"></i>Import</button>
+                        </div>
+                    </div>
+                    <div class="bg-[#111827] rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4"><i class="fab fa-google mr-2"></i>Import from Google Sheet</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">Sheet URL</label>
+                                <input type="text" id="gsUrl" class="input w-full" placeholder="https://docs.google.com/spreadsheets/d/...">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">Project Name</label>
+                                <input type="text" id="gsProject" class="input w-full" placeholder="default">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">Environment</label>
+                                <select id="gsEnv" class="input w-full">
+                                    <option>STG</option>
+                                    <option>Production</option>
+                                    <option>TBD</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary w-full" onclick="doGSheetImport()"><i class="fas fa-download mr-2"></i>Import</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function doImport() {
+            const file = document.getElementById('importFile').files[0];
+            if (!file) return showToast('Select a file');
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('project', document.getElementById('importProject').value || 'default');
+            formData.append('env', document.getElementById('importEnv').value);
+            const res = await fetch('/api/import', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Imported ${data.imported}, updated ${data.updated}`);
+                location.reload();
+            } else {
+                showToast(data.error);
+            }
+        }
+        
+        async function doGSheetImport() {
+            const url = document.getElementById('gsUrl').value;
+            if (!url) return showToast('Enter sheet URL');
+            const res = await fetch('/api/gsheet/import', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ url, project: document.getElementById('gsProject').value || 'default', env: document.getElementById('gsEnv').value })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Imported ${data.imported}, updated ${data.updated}`);
+                location.reload();
+            } else {
+                showToast(data.error);
+            }
+        }
+        
+        function renderGenerate(container) {
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-cog mr-2"></i>Generate Report</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">Format</label>
+                                <select id="pptFormat" class="input w-full">
+                                    ${presets.map(p => `<option value="${p}" ${p === currentFmt ? 'selected' : ''}>${p}</option>`).join('')}
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                            <div id="customFormatDiv" style="display:none">
+                                <label class="block text-sm text-[#868e96] mb-2">Custom Format</label>
+                                <input type="text" id="customFormat" class="input w-full" value="[Sn]. [ID] | [Title] | [Status]">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">Project Filter</label>
+                                <select id="projectFilter" class="input w-full">
+                                    <option value="all">All Projects</option>
+                                    ${projects.map(p => `<option value="${p.id}">${p.label}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">Report Title</label>
+                                <input type="text" id="reportTitle" class="input w-full" value="Ticket Status Report">
+                            </div>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2"><input type="checkbox" id="includeHtml" checked> HTML</label>
+                                <label class="flex items-center gap-2"><input type="checkbox" id="includePlain" checked> Plain Text</label>
+                            </div>
+                            <button class="btn btn-primary w-full" onclick="generatePpt()"><i class="fas fa-bolt mr-2"></i>Generate</button>
+                            <div id="downloadLinks" class="space-y-2 mt-4"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('pptFormat').addEventListener('change', (e) => {
+                document.getElementById('customFormatDiv').style.display = e.target.value === 'custom' ? 'block' : 'none';
+            });
+        }
+        
+        async function generatePpt() {
+            const tickets = Object.entries(db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
+            const res = await fetch('/api/generate/ppt', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    format: document.getElementById('pptFormat').value,
+                    custom_format: document.getElementById('customFormat').value,
+                    project: document.getElementById('projectFilter').value,
+                    title: document.getElementById('reportTitle').value,
+                    html: document.getElementById('includeHtml').checked,
+                    plain: document.getElementById('includePlain').checked,
+                    tickets
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Generated ${data.lines} tickets`);
+                let links = '';
+                if (data.html_file) links += `<a href="/api/download/html" class="btn btn-secondary block text-center">Download HTML</a>`;
+                if (data.plain_file) links += `<a href="/api/download/plain" class="btn btn-secondary block text-center">Download Text</a>`;
+                if (data.html_all_file) links += `<a href="/api/download/all" class="btn btn-secondary block text-center">Download All (HTML)</a>`;
+                document.getElementById('downloadLinks').innerHTML = links;
+            }
+        }
+        
+        function renderGSheet(container) {
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4"><i class="fab fa-google mr-2"></i>Google Sheet Links</h3>
+                        <div class="space-y-4">
+                            ${projects.map(p => `
+                                <div class="flex gap-2 items-center">
+                                    <input type="checkbox" id="gs_${p.id}" ${p.gsheet_enabled ? 'checked' : ''} onchange="saveGSheetLinks()">
+                                    <input type="text" id="url_${p.id}" class="input flex-1" value="${p.gsheet_url || ''}" placeholder="Sheet URL" onchange="saveGSheetLinks()">
+                                    <span class="text-sm text-[#868e96]">${p.label}</span>
+                                </div>
+                            `).join('')}
+                            <button class="btn btn-primary" onclick="syncAllSheets()"><i class="fas fa-sync mr-2"></i>Sync All</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function saveGSheetLinks() {
+            const links = {};
+            projects.forEach(p => {
+                links[p.id] = {
+                    enabled: document.getElementById(`gs_${p.id}`)?.checked || false,
+                    url: document.getElementById(`url_${p.id}`)?.value || ''
+                };
+            });
+            await fetch('/api/gsheet/links', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(links) });
+        }
+        
+        async function syncAllSheets() {
+            showToast('Syncing...');
+            for (const p of projects) {
+                if (p.gsheet_enabled && p.gsheet_url) {
+                    await fetch('/api/gsheet/import', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ url: p.gsheet_url, project: p.id, env: 'STG' })
+                    });
+                }
+            }
+            location.reload();
+        }
+        
+        function renderSettings(container) {
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-cog mr-2"></i>Settings</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-[#868e96] mb-2">Default PPT Format</label>
+                                <select id="defaultFmt" class="input w-full" onchange="saveSettings()">
+                                    ${presets.map(p => `<option value="${p}" ${p === currentFmt ? 'selected' : ''}>${p}</option>`).join('')}
+                                </select>
+                            </div>
+                            <button class="btn btn-secondary" onclick="clearDb()"><i class="fas fa-trash mr-2"></i>Clear All Data</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function saveSettings() {
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ ppt_format: document.getElementById('defaultFmt').value })
+            });
+            showToast('Settings saved');
+        }
+        
+        async function clearDb() {
+            if (confirm('Clear all ticket data?')) {
+                for (const id of Object.keys(db).filter(k => !k.startsWith('_'))) {
+                    await fetch(`/api/ticket/${id}`, { method: 'DELETE' });
+                }
+                location.reload();
+            }
+        }
+        
+        function editTicket(id) {
+            const t = db[id];
+            if (!t) return;
+            const container = document.getElementById('mainContent');
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">Edit Ticket: ${id}</h3>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm text-[#868e96] mb-2">Title</label><input type="text" id="editTitle" class="input w-full" value="${(t.Title || '').replace(/"/g, '&quot;')}"></div>
+                            <div><label class="block text-sm text-[#868e96] mb-2">Status</label><input type="text" id="editStatus" class="input w-full" value="${t.Status || ''}"></div>
+                            <div><label class="block text-sm text-[#868e96] mb-2">Issue Type</label><input type="text" id="editType" class="input w-full" value="${t['Issue Type'] || ''}"></div>
+                            <div><label class="block text-sm text-[#868e96] mb-2">Environment</label><input type="text" id="editEnv" class="input w-full" value="${t.Environment || ''}"></div>
+                            <div><label class="block text-sm text-[#868e96] mb-2">ETA</label><input type="text" id="editEta" class="input w-full" value="${t.ETA || ''}"></div>
+                            <div><label class="block text-sm text-[#868e96] mb-2">Severity</label><input type="text" id="editSev" class="input w-full" value="${t.Severity || ''}"></div>
+                            <div><label class="block text-sm text-[#868e96] mb-2">Owner</label><input type="text" id="editOwner" class="input w-full" value="${t.Owner || ''}"></div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-primary" onclick="saveTicket('${id}')">Save</button>
+                                <button class="btn btn-secondary" onclick="showView('tickets')">Cancel</button>
+                                <button class="btn btn-secondary text-red-400" onclick="deleteTicket('${id}')">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function saveTicket(id) {
+            await fetch(`/api/ticket/${id}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    Title: document.getElementById('editTitle').value,
+                    Status: document.getElementById('editStatus').value,
+                    'Issue Type': document.getElementById('editType').value,
+                    Environment: document.getElementById('editEnv').value,
+                    ETA: document.getElementById('editEta').value,
+                    Severity: document.getElementById('editSev').value,
+                    Owner: document.getElementById('editOwner').value
+                })
+            });
+            showToast('Saved');
+            location.reload();
+        }
+        
+        async function deleteTicket(id) {
+            if (confirm('Delete ticket?')) {
+                await fetch(`/api/ticket/${id}`, { method: 'DELETE' });
+                location.reload();
+            }
+        }
+        
+        showView('tickets');
+    </script>
+</body>
+</html>
