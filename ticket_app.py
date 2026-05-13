@@ -775,6 +775,30 @@ def api_project_create():
     return jsonify({"success": True, "project": name.lower(), "label": name})
 
 
+@app.route("/api/project/rename", methods=["POST"])
+def api_project_rename():
+    data = request.get_json()
+    old_name = data.get("old", "").strip()
+    new_name = data.get("new", "").strip()
+    if not old_name or not new_name:
+        return jsonify({"success": False, "error": "Names required"}), 400
+    
+    db = load_db()
+    for tid, tdata in db.items():
+        if tid.startswith("_"):
+            continue
+        if tdata.get("Project", "").lower() == old_name.lower():
+            tdata["Project"] = new_name
+    
+    gsheet_links = load_gsheet_links()
+    if old_name.lower() in gsheet_links:
+        gsheet_links[new_name.lower()] = gsheet_links.pop(old_name.lower())
+        save_gsheet_links(gsheet_links)
+    
+    save_db(db)
+    return jsonify({"success": True})
+
+
 @app.route("/api/settings", methods=["GET"])
 def api_settings():
     db = load_db()
