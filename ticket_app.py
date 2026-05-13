@@ -202,17 +202,22 @@ def read_gsheet_public(url, sheet_name=""):
 
 
 def extract_id(row):
-    for key in ["ID", "#,Title,Project,ID", "#", "Ticket ID"]:
-        val = row.get(key, "")
-        if val:
-            return str(val).lstrip("#").strip()
+    for k, v in row.items():
+        if not v:
+            continue
+        v_str = str(v).strip()
+        if not v_str:
+            continue
+        if k.lower() in ['id', '#', 'ticket id', 'ticketid']:
+            cleaned = v_str.lstrip('#').strip()
+            if re.match(r'\w+-\d+', cleaned, re.I):
+                return cleaned
+    
     for k, v in row.items():
         if v and isinstance(v, str):
-            match = re.match(r"#?\s*([A-Z]+-\d+)", v.strip(), re.I)
+            match = re.match(r"#?\s*(\w+-\d+)", v.strip(), re.I)
             if match:
                 return match.group(1).strip()
-            if re.match(r"#?\s*\w+-\d+", v.strip()):
-                return str(v).lstrip("#").strip()
     return ""
 
 
