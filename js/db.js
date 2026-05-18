@@ -1,4 +1,4 @@
-const SUPABASE_URL = 'https://myvumtkjdkduhaiiemwd.supabase.co';
+const SUPABASE_URL = 'https://myvumtjkzkduhaiiemwd.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15dnVtdGpremtkdWhhaWllbXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwOTUwNjksImV4cCI6MjA5NDY3MTA2OX0.SjZDm4_VCBASf4QCYx58Nh_nYUBt0ivFK_8Hguf4qeU';
 
 let sb;
