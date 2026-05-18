@@ -333,21 +333,69 @@
         }
         
         function renderRawPaste(container) {
+            const allColumns = ['Title', 'Status', 'Issue Type', 'Environment', 'ETA', 'Severity', 'Owner', 'Project'];
             container.innerHTML = `
-                <div class="max-w-2xl mx-auto">
+                <div class="max-w-4xl mx-auto space-y-4">
                     <div class="bg-[#111827] rounded-lg p-4">
                         <h3 class="text-sm font-semibold mb-3"><i class="fas fa-paste mr-2"></i>Raw Data Paste</h3>
-                        <p class="text-xs text-[#868e96] mb-3">Paste text containing ticket IDs. Each ticket ID will be found and updated with extracted info.</p>
-                        <div class="space-y-3">
-                            <div><label class="block text-xs text-[#868e96] mb-1">Paste your data here</label>
-                                <textarea id="rawDataInput" class="input w-full h-64" placeholder="Paste text with ticket IDs like WOTASD-123, statuses, env, etc..."></textarea>
-                            </div>
-                            <button class="btn btn-primary w-full" onclick="processRawData()"><i class="fas fa-bolt mr-2"></i>Process & Update</button>
+                        <div class="flex gap-2 mb-4">
+                            <button class="tab-btn active" id="rawModeOld" onclick="switchRawMode('old')">Old Method</button>
+                            <button class="tab-btn" id="rawModeNew" onclick="switchRawMode('new')">New Method</button>
+                        </div>
+                        <div id="rawOldMode">
+                            <p class="text-xs text-[#868e96] mb-3">Paste text containing ticket IDs. Each ticket ID will be found and updated with extracted info (Status, Env, ETA, Issue Type).</p>
+                            <textarea id="rawDataInput" class="input w-full h-64" placeholder="Paste text with ticket IDs like WOTASD-123, statuses, env, etc..."></textarea>
+                            <button class="btn btn-primary w-full mt-3" onclick="processRawData()"><i class="fas fa-bolt mr-2"></i>Process & Update</button>
                             <div id="rawPasteResults" class="text-xs text-[#868e96] mt-2"></div>
+                        </div>
+                        <div id="rawNewMode" style="display:none">
+                            <p class="text-xs text-[#868e96] mb-3">Paste text with ticket IDs. Specify which column to extract from what pattern using regex below each mapping.</p>
+                            <div class="mb-3">
+                                <label class="block text-xs text-[#868e96] mb-1">Paste your data here</label>
+                                <textarea id="rawDataInputNew" class="input w-full h-64" placeholder="Paste text with ticket IDs and field data..."></textarea>
+                            </div>
+                            <div class="space-y-2 mb-3" id="columnMappings">
+                                ${allColumns.map(col => `
+                                    <div class="flex gap-2 items-center bg-[#1a1a2e] p-2 rounded">
+                                        <input type="checkbox" id="map_cb_${col.replace(/ /g, '_')}" class="accent-[#da77f2]">
+                                        <label class="text-xs font-medium w-28" for="map_cb_${col.replace(/ /g, '_')}">${col}</label>
+                                        <input type="text" id="map_pat_${col.replace(/ /g, '_')}" class="input text-xs flex-1" placeholder="Regex pattern e.g. (open|closed|resolved)">
+                                        <span class="text-[10px] text-[#868e96]">Groups () extract value</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="flex gap-2 mb-2">
+                                <button class="btn btn-secondary btn-sm" onclick="loadPresetMappings()"><i class="fas fa-magic mr-1"></i>Load Preset</button>
+                            </div>
+                            <button class="btn btn-primary w-full" onclick="processRawDataNew()"><i class="fas fa-bolt mr-2"></i>Process & Update</button>
+                            <div id="rawPasteResultsNew" class="text-xs text-[#868e96] mt-2"></div>
                         </div>
                     </div>
                 </div>
             `;
+        }
+
+        function switchRawMode(mode) {
+            document.getElementById('rawOldMode').style.display = mode === 'old' ? 'block' : 'none';
+            document.getElementById('rawNewMode').style.display = mode === 'new' ? 'block' : 'none';
+            document.getElementById('rawModeOld').classList.toggle('active', mode === 'old');
+            document.getElementById('rawModeNew').classList.toggle('active', mode === 'new');
+        }
+
+        function loadPresetMappings() {
+            const mappings = {
+                Status: { pattern: '(open|se-wip|l1-wip|l2|l3|l3-wip|resolved|closed|need info|done)' },
+                Environment: { pattern: '(STG|stg|staging|prod|live|production|TBD)' },
+                ETA: { pattern: '(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})' },
+                'Issue Type': { pattern: '(bug|feature|enhancement|hotfix|documentation)' },
+                Severity: { pattern: '(blocker|critical|high|medium|low|info)' }
+            };
+            for (const [col, data] of Object.entries(mappings)) {
+                const cb = document.getElementById('map_cb_' + col.replace(/ /g, '_'));
+                const pat = document.getElementById('map_pat_' + col.replace(/ /g, '_'));
+                if (cb) cb.checked = true;
+                if (pat) pat.value = data.pattern;
+            }
         }
         
         async function processRawData() {
@@ -389,6 +437,42 @@
             document.getElementById('rawPasteResults').innerHTML = `Found ${found} tickets, updated ${updated}`;
             showToast(`Found ${found} tickets, updated ${updated}`);
             if (updated > 0) setTimeout(() => location.reload(), 1500);
+        }
+
+        async function processRawDataNew() {
+            const text = document.getElementById('rawDataInputNew').value;
+            if (!text) return showToast('Paste some data first');
+
+            const allColumns = ['Title', 'Status', 'Issue Type', 'Environment', 'ETA', 'Severity', 'Owner', 'Project'];
+            const columnMappings = {};
+
+            for (const col of allColumns) {
+                const cb = document.getElementById('map_cb_' + col.replace(/ /g, '_'));
+                const pat = document.getElementById('map_pat_' + col.replace(/ /g, '_'));
+                if (cb && cb.checked && pat && pat.value.trim()) {
+                    columnMappings[col] = pat.value.trim();
+                }
+            }
+
+            if (Object.keys(columnMappings).length === 0) {
+                return showToast('Select at least one column mapping');
+            }
+
+            const res = await fetch('/api/rawdata/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rawText: text, columnMappings })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('rawPasteResultsNew').innerHTML =
+                    `Found ${data.found} tickets, updated ${data.updated}<br>` +
+                    (data.tickets.length ? `Tickets: ${data.tickets.join(', ')}` : '');
+                showToast(`Found ${data.found}, updated ${data.updated}`);
+                if (data.updated > 0) setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast(data.error || 'Error');
+            }
         }
         
         function renameProject(pid) {

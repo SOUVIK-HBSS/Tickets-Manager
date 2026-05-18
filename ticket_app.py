@@ -462,15 +462,18 @@ def import_records_to_db(records, project=None):
         if not raw_id:
             continue
         current_ids.add(raw_id)
-        
+
         proj = row.get("_project") or project or "default"
         rec = {**row, "imported": True, "Project": proj}
 
         if raw_id in db:
+            existing_title = db[raw_id].get("Title", "")
             existing_env = db[raw_id].get("Environment", "")
             existing_eta = db[raw_id].get("ETA", "")
             existing_project = db[raw_id].get("Project", "")
             db[raw_id] = {**db[raw_id], **rec}
+            if existing_title:
+                db[raw_id]["Title"] = existing_title
             if existing_env:
                 db[raw_id]["Environment"] = existing_env
             if existing_eta:
@@ -635,6 +638,57 @@ def api_ticket_delete(ticket_id):
         del db[ticket_id]
         save_db(db)
     return jsonify({"success": True})
+
+
+@app.route("/api/rawdata/update", methods=["POST"])
+def api_rawdata_update():
+    db = load_db()
+    data = request.get_json()
+    raw_text = data.get("rawText", "")
+    column_mappings = data.get("columnMappings", {})
+
+    if not raw_text:
+        return jsonify({"success": False, "error": "No text provided"}), 400
+    if not column_mappings:
+        return jsonify({"success": False, "error": "No column mappings provided"}), 400
+
+    ticket_ids = re.findall(r"[A-Z]+-\d+", raw_text.upper())
+    ticket_ids = list(dict.fromkeys(ticket_ids))
+
+    updated = 0
+    found = 0
+    updated_tickets = []
+
+    for tid in ticket_ids:
+        tid_clean = tid.strip()
+        if tid_clean not in db:
+            continue
+        found += 1
+
+        updates = {}
+        text_lower = raw_text.lower()
+
+        for col_name, pattern in column_mappings.items():
+            if not pattern:
+                continue
+            pattern_lower = pattern.lower()
+            match = re.search(pattern_lower, text_lower)
+            if match:
+                val = match.group(1) if match.groups() else match.group(0)
+                updates[col_name] = val.strip()
+
+        if updates:
+            db[tid_clean].update(updates)
+            updated += 1
+            updated_tickets.append(tid_clean)
+
+    save_db(db)
+    return jsonify({
+        "success": True,
+        "found": found,
+        "updated": updated,
+        "tickets": updated_tickets
+    })
 
 
 @app.route("/api/project/<project_id>", methods=["DELETE"])
