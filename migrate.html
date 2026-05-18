@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrate Data to Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #0a0a0a; color: #e9ecef; font-family: 'Segoe UI', Arial, sans-serif; }
+        .card { background: #111827; border-radius: 8px; padding: 20px; }
+        .input { background: #1a1a2e; border: 1px solid #2d2d44; color: #e9ecef; padding: 6px 10px; border-radius: 4px; width: 100%; }
+        .btn { padding: 8px 16px; border-radius: 4px; cursor: pointer; border: none; font-weight: 500; margin: 4px; }
+        .btn-primary { background: #da77f2; color: white; }
+        .btn-secondary { background: #1a1a2e; color: #e9ecef; }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-xl mx-auto space-y-4">
+        <h1 class="text-2xl font-bold text-[#da77f2]"><i class="fas fa-database mr-2"></i>Migrate Data to Supabase</h1>
+
+        <div class="card">
+            <h3 class="text-sm font-semibold mb-3">Step 1: Configure Supabase</h3>
+            <div class="space-y-2">
+                <div><label class="text-xs text-[#868e96] block">Supabase URL</label>
+                    <input type="text" id="supabaseUrl" class="input" value="https://myvumtkjdkduhaiiemwd.supabase.co">
+                </div>
+                <div><label class="text-xs text-[#868e96] block">Anon Key</label>
+                    <input type="text" id="supabaseKey" class="input" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15dnVtdGpremtkdWhhaWllbXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwOTUwNjksImV4cCI6MjA5NDY3MTA2OX0.SjZDm4_VCBASf4QCYx58Nh_nYUBt0ivFK_8Hguf4qeU">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="text-sm font-semibold mb-3">Step 2: Select your ticket_db.json file</h3>
+            <input type="file" id="jsonFile" accept=".json" class="input mb-3">
+            <div id="fileInfo" class="text-xs text-[#868e96] mb-3"></div>
+            <button class="btn btn-primary" onclick="previewJson()"><i class="fas fa-eye mr-1"></i>Preview Data</button>
+        </div>
+
+        <div class="card">
+            <h3 class="text-sm font-semibold mb-3">Step 3: Review & Migrate</h3>
+            <div id="previewContent" class="text-xs text-[#868e96] mb-3"></div>
+            <button class="btn btn-secondary" id="migrateBtn" disabled onclick="migrateData()">
+                <i class="fas fa-upload mr-1"></i>Migrate to Supabase
+            </button>
+            <div id="result" class="text-xs mt-3"></div>
+        </div>
+    </div>
+
+    <script>
+        let parsedData = null;
+        let supabase = null;
+
+        function getClient() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            if (!url || !key) { alert('Enter Supabase URL and key'); return null; }
+            return window.supabase.createClient(url, key);
+        }
+
+        document.getElementById('jsonFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) { document.getElementById('fileInfo').textContent = ''; return; }
+            document.getElementById('fileInfo').textContent = `File: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        });
+
+        function previewJson() {
+            const file = document.getElementById('jsonFile').files[0];
+            if (!file) { alert('Select a JSON file'); return; }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    parsedData = JSON.parse(e.target.result);
+                    const tickets = Object.entries(parsedData).filter(([k]) => !k.startsWith('_'));
+                    const settings = parsedData['_settings'] || null;
+                    document.getElementById('previewContent').innerHTML =
+                        `Found <strong>${tickets.length}</strong> tickets, settings: <strong>${settings ? 'yes' : 'no'}</strong>.`;
+                    document.getElementById('migrateBtn').disabled = false;
+                } catch (ex) {
+                    alert('Invalid JSON file: ' + ex.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function migrateData() {
+            if (!parsedData) { alert('Preview data first'); return; }
+
+            const client = getClient();
+            if (!client) return;
+
+            document.getElementById('result').innerHTML = 'Migrating...';
+            document.getElementById('migrateBtn').disabled = true;
+
+            const tickets = Object.entries(parsedData).filter(([k]) => !k.startsWith('_'));
+            let success = 0, errors = 0;
+
+            for (const [id, data] of tickets) {
+                try {
+                    const record = {
+                        id: id,
+                        title: data.title || data.Title || '',
+                        status: data.status || data.Status || '',
+                        issue_type: data.issue_type || data['Issue Type'] || '',
+                        environment: data.environment || data.Environment || '',
+                        eta: data.eta || data.ETA || '',
+                        severity: data.severity || data.Severity || '',
+                        owner: data.owner || data.Owner || '',
+                        project: data.project || data.Project || 'default',
+                        imported: true,
+                    };
+                    const { error } = await client.from('tickets').upsert(record, { onConflict: 'id' });
+                    if (error) { errors++; console.error(id, error); }
+                    else success++;
+                } catch (e) { errors++; console.error(id, e); }
+            }
+
+            // migrate settings
+            const settings = parsedData['_settings'];
+            if (settings && settings.openFilterCriteria) {
+                await client.from('app_data').upsert({ key: '_settings', value: settings }, { onConflict: 'key' });
+            }
+
+            const gsheet = parsedData['_gsheet_links'];
+            if (gsheet) {
+                await client.from('app_data').upsert({ key: 'gsheet_links', value: gsheet }, { onConflict: 'key' });
+            }
+
+            document.getElementById('result').innerHTML =
+                `Migration complete: ${success} migrated, ${errors} errors.` +
+                (errors ? ' Check console for details.' : ' Refresh the app to see your data.');
+            document.getElementById('previewContent').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
