@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tickets Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --bg-primary: #0a0a0a; --bg-secondary: #111827; --bg-tertiary: #1a1a2e; --text-primary: #e9ecef; --text-secondary: #868e96; --accent: #da77f2; --accent-hover: #c061de; --border: #2d2d44; }
+        body { background: var(--bg-primary); color: var(--text-primary); font-family: 'Segoe UI', Arial, sans-serif; }
+        .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); }
+        .nav-item { padding: 10px 16px; cursor: pointer; transition: all 0.2s; border-left: 3px solid transparent; font-size: 14px; }
+        .nav-item:hover { background: var(--bg-tertiary); }
+        .nav-item.active { background: var(--bg-tertiary); border-left-color: var(--accent); }
+        .btn { padding: 6px 12px; border-radius: 4px; cursor: pointer; border: none; font-weight: 500; font-size: 13px; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+        .input { background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-primary); padding: 6px 10px; border-radius: 4px; font-size: 13px; }
+        .input:focus { outline: none; border-color: var(--accent); }
+        .modal { background: rgba(0,0,0,0.8); position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal.show { display: flex; }
+        .modal-content { background: var(--bg-secondary); border-radius: 8px; padding: 20px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .badge { padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .tab-btn { padding: 8px 16px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; font-size: 13px; white-space: nowrap; }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .toast { position: fixed; bottom: 20px; right: 20px; padding: 10px 16px; border-radius: 6px; background: var(--accent); color: white; transform: translateY(100px); transition: transform 0.3s; font-size: 13px; }
+        .toast.show { transform: translateY(0); }
+        .ticket-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .ticket-table th { padding: 8px 6px; text-align: left; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; color: var(--text-secondary); border-bottom: 2px solid var(--accent); position: relative; user-select: none; white-space: nowrap; }
+        .ticket-table th:hover { background: var(--bg-tertiary); }
+        .ticket-table td { padding: 4px 6px; border-bottom: 1px solid var(--border); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ticket-table tr:hover td { background: var(--bg-tertiary); }
+        .filter-row { display: flex; gap: 4px; padding: 6px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+        .resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 8px; cursor: col-resize; background: transparent; }
+        .resize-handle:hover { background: var(--accent); }
+        .filter-dropdown { position: relative; display: inline-block; }
+        .filter-dropdown-content { display: none; position: absolute; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px; padding: 8px; max-height: 200px; overflow-y: auto; z-index: 10; min-width: 150px; }
+        .filter-dropdown:hover .filter-dropdown-content { display: block; }
+        .filter-option { display: flex; align-items: center; gap: 4px; padding: 4px; font-size: 12px; }
+        .filter-option:hover { background: var(--bg-tertiary); }
+        select.input { min-width: 80px; }
+        option { background: #111827; color: #e9ecef; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1a1a2e; }
+        ::-webkit-scrollbar-thumb { background: #2d2d44; border-radius: 3px; }
+    </style>
+</head>
+<body class="h-screen flex">
+    <div class="sidebar w-56 flex-shrink-0 flex flex-col">
+        <div class="p-3 border-b border-[#2d2d44]">
+            <h1 class="text-lg font-bold text-[#da77f2]"><i class="fas fa-ticket-alt mr-2"></i>Tickets</h1>
+        </div>
+        <div class="flex-1 overflow-y-auto py-1">
+            <div class="nav-item active" data-view="tickets"><i class="fas fa-list mr-2 w-4"></i>All Tickets</div>
+            <div class="nav-item" data-view="import"><i class="fas fa-file-import mr-2 w-4"></i>Import</div>
+            <div class="nav-item" data-view="generate"><i class="fas fa-file-export mr-2 w-4"></i>Generate</div>
+            <div class="nav-item" data-view="gsheet"><i class="fas fa-google mr-2 w-4"></i>Projects</div>
+            <div class="nav-item" data-view="rawpaste"><i class="fas fa-paste mr-2 w-4"></i>Raw Data</div>
+            <div class="nav-item" data-view="settings"><i class="fas fa-cog mr-2 w-4"></i>Settings</div>
+        </div>
+        <div class="p-3 border-t border-[#2d2d44] text-xs text-[#868e96]">
+            <div>Total: <span id="totalTickets">0</span></div>
+            <div>Showing: <span id="filteredCount">0</span></div>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="header p-3 border-b border-[#2d2d44] flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <h2 class="text-base font-semibold" id="viewTitle">All Tickets</h2>
+                <button id="filterOpenBtn" class="btn btn-secondary btn-sm" onclick="toggleOpenFilter()">
+                    <i class="fas fa-filter mr-1"></i>Open Only
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button class="btn btn-secondary btn-sm" onclick="showView('import')"><i class="fas fa-plus mr-1"></i>Import</button>
+                <button class="btn btn-primary btn-sm" onclick="showView('generate')"><i class="fas fa-file-export mr-1"></i>Generate</button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-auto p-2" id="mainContent"></div>
+    </div>
+
+    <div id="toast" class="toast">Message</div>
+
+    <script>
+        window.db = {};
+        window.currentProjectFilter = 'all';
+        let currentView = 'tickets';
+        let projects = [];
+        let showOpenOnly = false;
+        let openFilterCriteria = [];
+        let currentFmt = 'default';
+
+        const defaultColumns = [
+            { key: 'Sn', label: '#', width: 40 },
+            { key: 'ID', label: 'ID', width: 110 },
+            { key: 'Title', label: 'Title', width: 180 },
+            { key: 'issue_type', label: 'Type', width: 80 },
+            { key: 'Status', label: 'Status', width: 90 },
+            { key: 'Environment', label: 'Env', width: 55 },
+            { key: 'ETA', label: 'ETA', width: 65 },
+            { key: 'Severity', label: 'Sev', width: 55 },
+            { key: 'Owner', label: 'Owner', width: 90 }
+        ];
+
+        let columns = JSON.parse(localStorage.getItem('ticketColumns')) || defaultColumns;
+        let columnFilters = {};
+        let resizingCol = null, startX = 0, startWidth = 0;
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function showView(view) {
+            currentView = view;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
+            const titles = { tickets: 'All Tickets', import: 'Import', generate: 'Generate', gsheet: 'Projects', rawpaste: 'Raw Data', settings: 'Settings' };
+            document.getElementById('viewTitle').textContent = titles[view] || view;
+            renderView(view);
+        }
+
+        document.querySelectorAll('.nav-item').forEach(el => el.addEventListener('click', () => showView(el.dataset.view)));
+
+        async function renderView(view) {
+            const container = document.getElementById('mainContent');
+            let ticketData;
+            if (['tickets','import','generate','rawpaste'].includes(view)) {
+                ticketData = await window.DB.loadTickets();
+                if (view === 'tickets') window.db = ticketData;
+            }
+            switch(view) {
+                case 'tickets':
+                    window.db = ticketData || await window.DB.loadTickets();
+                    renderTickets(container);
+                    break;
+                case 'import':
+                    window.db = ticketData || await window.DB.loadTickets();
+                    renderImportView(container, window.db);
+                    break;
+                case 'generate':
+                    window.db = ticketData || await window.DB.loadTickets();
+                    renderGenerate(container);
+                    break;
+                case 'gsheet':
+                    renderProjects(container);
+                    break;
+                case 'rawpaste':
+                    window.db = ticketData || await window.DB.loadTickets();
+                    renderRawPasteView(container, window.db);
+                    break;
+                case 'settings':
+                    renderSettings(container);
+                    break;
+            }
+        }
+
+        function isOpenTicket(ticket) {
+            if (!openFilterCriteria || !openFilterCriteria.length) {
+                const openStatuses = ['open', 'se-wip', 'l1-wip', 'l2', 'l3', 'l3-wip', 'tm to assign', 'need info', 'need info from client'];
+                return openStatuses.includes((ticket.Status || ticket.status || '').toLowerCase());
+            }
+            for (const crit of openFilterCriteria) {
+                const fieldKey = crit.field.toLowerCase().replace(/ /g, '_');
+                const val = (ticket[fieldKey] || ticket[crit.field] || '').toLowerCase();
+                const critVal = (crit.value || '').toLowerCase();
+                if (crit.operator === 'contains' && val.includes(critVal)) return true;
+                if (crit.operator === 'equals' && val === critVal) return true;
+                if (crit.operator === 'not_equals' && val !== critVal) return true;
+                if (crit.operator === 'empty' && !val) return true;
+                if (crit.operator === 'not_empty' && val) return true;
+            }
+            return false;
+        }
+
+        function toggleOpenFilter() {
+            showOpenOnly = !showOpenOnly;
+            const btn = document.getElementById('filterOpenBtn');
+            btn.style.background = showOpenOnly ? 'var(--accent)' : '';
+            btn.style.color = showOpenOnly ? 'white' : '';
+            renderView('tickets');
+        }
+
+        function ticketValue(ticket, colKey) {
+            if (colKey === 'Sn') return '';
+            if (colKey === 'ID') return ticket.id || '';
+            const dbKey = colKey.toLowerCase().replace(/ /g, '_');
+            return ticket[dbKey] || '';
+        }
+
+        function renderTickets(container) {
+            const allTickets = Object.entries(window.db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
+
+            let filtered = currentProjectFilter === 'all'
+                ? allTickets
+                : allTickets.filter(t => (t.project || 'default').toLowerCase() === currentProjectFilter);
+
+            if (showOpenOnly) filtered = filtered.filter(isOpenTicket);
+
+            for (const [key, vals] of Object.entries(columnFilters)) {
+                if (vals && vals.length > 0) {
+                    const dbKey = key.toLowerCase().replace(/ /g, '_');
+                    filtered = filtered.filter(t => {
+                        const val = (t[dbKey] || '').toLowerCase();
+                        return vals.includes(val) || (!val && vals.includes(''));
+                    });
+                }
+            }
+
+            const projectTabs = ['all', ...new Set(allTickets.map(t => (t.project || 'default').toLowerCase()))];
+
+            let html = `
+                <div class="flex gap-1 mb-2 border-b border-[#2d2d44] pb-2 overflow-x-auto">
+                    ${projectTabs.map(p => `
+                        <button class="tab-btn ${currentProjectFilter === p ? 'active' : ''}" onclick="filterByProject('${p}')">
+                            ${p === 'all' ? 'All' : p}
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="filter-row">
+                    ${columns.filter(c => c.key !== 'Sn').map(col => {
+                        const vals = getUniqueValues(col.key);
+                        if (vals.length === 0) return '';
+                        return `<div class="filter-dropdown">
+                            <button class="btn btn-secondary btn-sm" style="min-width:${col.width}px">
+                                ${col.label} ${columnFilters[col.key]?.length ? `(${columnFilters[col.key].length})` : ''} <i class="fas fa-caret-down ml-1"></i>
+                            </button>
+                            <div class="filter-dropdown-content">
+                                ${vals.map(v => `
+                                    <label class="filter-option">
+                                        <input type="checkbox" ${(columnFilters[col.key] || []).includes(v) ? 'checked' : ''}
+                                            onchange="toggleFilter('${col.key}', '${v.replace(/'/g, "\\'")}', this.checked)">
+                                        ${v || '(empty)'}
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                    <button class="btn btn-secondary btn-sm ml-2" onclick="clearFilters()">Clear</button>
+                </div>
+            `;
+
+            if (!filtered.length) {
+                html += '<div class="text-center text-[#868e96] py-8">No tickets found</div>';
+            } else {
+                html += `<table class="ticket-table"><thead><tr>`;
+                html += columns.map(col => `
+                    <th style="width:${col.width}px" onmousedown="startResize(event, '${col.key}')">
+                        ${col.label}
+                        <div class="resize-handle"></div>
+                    </th>
+                `).join('');
+                html += `</tr></thead><tbody>`;
+                html += filtered.map((t, i) => `
+                    <tr onclick="editTicket('${t.id}')" style="cursor:pointer">
+                        ${columns.map(col => {
+                            if (col.key === 'Sn') return `<td>${i+1}</td>`;
+                            if (col.key === 'ID') return `<td style="color:#da77f2;font-family:monospace">${t.id}</td>`;
+                            const val = t[col.key] || t[col.key.toLowerCase()] || '';
+                            const display = val.toString().replace(/"/g, '');
+                            if (col.key === 'Status' || col.key === 'status') {
+                                return `<td><span class="badge" style="background:${getColor('status', display)}20;color:${getColor('status', display)}">${display || '-'}</span></td>`;
+                            }
+                            if (col.key === 'issue_type') {
+                                return `<td><span class="badge" style="background:${getColor('issue', display)}20;color:${getColor('issue', display)}">${display || '-'}</span></td>`;
+                            }
+                            if (col.key === 'Environment' || col.key === 'environment') {
+                                return `<td style="color:${getColor('env', display)};font-weight:600">${display || ''}</td>`;
+                            }
+                            if (col.key === 'Severity' || col.key === 'severity') {
+                                return `<td style="color:${getColor('severity', display)}">${display || ''}</td>`;
+                            }
+                            return `<td>${display}</td>`;
+                        }).join('')}
+                    </tr>
+                `).join('');
+                html += '</tbody></table>';
+            }
+
+            container.innerHTML = html;
+            document.getElementById('totalTickets').textContent = allTickets.length;
+            document.getElementById('filteredCount').textContent = filtered.length;
+        }
+
+        function getUniqueValues(key) {
+            const allTickets = Object.entries(window.db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
+            const dbKey = key.toLowerCase().replace(/ /g, '_');
+            const values = [...new Set(allTickets.map(t => (t[dbKey] || t[key] || '').toLowerCase()))];
+            return values.sort();
+        }
+
+        function toggleFilter(key, value, checked) {
+            if (!columnFilters[key]) columnFilters[key] = [];
+            if (checked) {
+                if (!columnFilters[key].includes(value)) columnFilters[key].push(value);
+            } else {
+                columnFilters[key] = columnFilters[key].filter(v => v !== value);
+            }
+            renderView('tickets');
+        }
+
+        function clearFilters() {
+            columnFilters = {};
+            renderView('tickets');
+        }
+
+        function filterByProject(project) {
+            currentProjectFilter = project;
+            renderView('tickets');
+        }
+
+        function startResize(e, key) {
+            if (e.target.classList.contains('resize-handle')) {
+                resizingCol = key;
+                startX = e.clientX;
+                const col = columns.find(c => c.key === key);
+                startWidth = col ? col.width : 100;
+                document.addEventListener('mousemove', doResize);
+                document.addEventListener('mouseup', stopResize);
+            }
+        }
+
+        function doResize(e) {
+            if (resizingCol) {
+                const col = columns.find(c => c.key === resizingCol);
+                if (col) {
+                    col.width = Math.max(40, startWidth + e.clientX - startX);
+                    localStorage.setItem('ticketColumns', JSON.stringify(columns));
+                    renderView('tickets');
+                }
+            }
+        }
+
+        function stopResize() {
+            resizingCol = null;
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', stopResize);
+        }
+
+        function renderProjects(container) {
+            container.innerHTML = `
+                <div class="max-w-xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-4">
+                        <h3 class="text-sm font-semibold mb-3"><i class="fas fa-folder mr-2"></i>Projects</h3>
+                        <div id="projectList" class="space-y-2">Loading...</div>
+                    </div>
+                </div>
+            `;
+            loadProjectList();
+        }
+
+        async function loadProjectList() {
+            const db = await window.DB.loadTickets();
+            const allTickets = Object.entries(db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
+            const projList = [...new Set(allTickets.map(t => t.project || 'default'))];
+
+            document.getElementById('projectList').innerHTML = projList.map(p => `
+                <div class="flex gap-2 items-center bg-[#1a1a2e] p-3 rounded">
+                    <i class="fas fa-folder text-[#da77f2]"></i>
+                    <span class="flex-1 font-medium">${p}</span>
+                    <button class="btn btn-secondary btn-sm" onclick="renameProject('${p}')"><i class="fas fa-edit"></i> Rename</button>
+                    <button class="btn btn-secondary btn-sm text-red-400" onclick="deleteProject('${p}')"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('') || '<div class="text-[#868e96] text-xs">No projects found</div>';
+        }
+
+        async function renameProject(pid) {
+            const newName = prompt('Enter new project name:', pid);
+            if (newName && newName.trim() && newName !== pid) {
+                await window.DB.renameProject(pid, newName.trim());
+                showToast('Project renamed');
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+
+        async function deleteProject(pid) {
+            if (confirm(`Delete project "${pid}" and all its tickets?`)) {
+                await window.DB.deleteTicketsByProject(pid);
+                showToast('Deleted');
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+
+        function renderGenerate(container) {
+            container.innerHTML = `
+                <div class="max-w-xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-4">
+                        <h3 class="text-sm font-semibold mb-3"><i class="fas fa-cog mr-2"></i>Generate Report</h3>
+                        <div class="space-y-3">
+                            <div><label class="block text-xs text-[#868e96] mb-1">Format</label>
+                                <select id="pptFormat" class="input w-full" onchange="toggleCustomFormat()">
+                                    ${Object.keys(REPORTS.PRESETS).map(p => `<option value="${p}" ${p === currentFmt ? 'selected' : ''}>${p}</option>`).join('')}
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                            <div id="customFormatDiv" style="display:none"><input type="text" id="customFormat" class="input w-full" value="[Sn]. [ID] | [Title] | [Status]"></div>
+                            <div><label class="block text-xs text-[#868e96] mb-1">Project</label>
+                                <input type="text" id="genProjectFilter" class="input w-full" placeholder="Filter by project (leave blank for all)">
+                            </div>
+                            <div><label class="block text-xs text-[#868e96] mb-1">Title</label><input type="text" id="reportTitle" class="input w-full" value="Ticket Status Report"></div>
+                            <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="includeHtml" checked> HTML</label>
+                            <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="includePlain" checked> Plain</label>
+                            <button class="btn btn-primary w-full" onclick="generateReport()">Generate</button>
+                            <div id="reportResults" class="text-xs text-[#868e96] mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleCustomFormat() {
+            document.getElementById('customFormatDiv').style.display =
+                document.getElementById('pptFormat').value === 'custom' ? 'block' : 'none';
+        }
+
+        async function generateReport() {
+            const db = await window.DB.loadTickets();
+            const tickets = Object.entries(db).filter(([k]) => !k.startsWith('_')).map(([id, d]) => ({id, ...d}));
+
+            const fmtName = document.getElementById('pptFormat').value;
+            const fmt = fmtName === 'custom'
+                ? document.getElementById('customFormat').value
+                : REPORTS.PRESETS[fmtName] || REPORTS.PRESETS['default'];
+            const projectFilter = document.getElementById('genProjectFilter').value.trim().toLowerCase();
+            const title = document.getElementById('reportTitle').value;
+
+            let filtered = tickets;
+            if (projectFilter) {
+                filtered = tickets.filter(t => (t.project || '').toLowerCase().includes(projectFilter));
+            }
+
+            if (!filtered.length) { showToast('No tickets matched'); return; }
+
+            const includeHtml = document.getElementById('includeHtml').checked;
+            const includePlain = document.getElementById('includePlain').checked;
+
+            let results = '';
+            if (includeHtml) {
+                REPORTS.downloadHtmlReport(filtered, fmt, title);
+                results += 'HTML report downloaded. ';
+            }
+            if (includePlain) {
+                REPORTS.downloadPlainReport(filtered, fmt);
+                results += 'Plain text report downloaded. ';
+            }
+
+            document.getElementById('reportResults').innerHTML = `${results}(${filtered.length} tickets)`;
+            showToast(`Generated ${filtered.length} tickets`);
+        }
+
+        function renderSettings(container) {
+            container.innerHTML = `
+                <div class="max-w-xl mx-auto space-y-4">
+                    <div class="bg-[#111827] rounded-lg p-4">
+                        <h3 class="text-sm font-semibold mb-3"><i class="fas fa-filter mr-2"></i>Open Ticket Criteria</h3>
+                        <div class="space-y-2 mb-3" id="criteriaList">
+                            ${openFilterCriteria.map((c, i) => `
+                                <div class="flex gap-2 items-center">
+                                    <select class="input text-xs" id="field_${i}">
+                                        <option value="Status" ${c.field==='Status'?'selected':''}>Status</option>
+                                        <option value="Severity" ${c.field==='Severity'?'selected':''}>Severity</option>
+                                        <option value="Issue Type" ${c.field==='Issue Type'?'selected':''}>Issue Type</option>
+                                        <option value="Environment" ${c.field==='Environment'?'selected':''}>Environment</option>
+                                        <option value="Owner" ${c.field==='Owner'?'selected':''}>Owner</option>
+                                    </select>
+                                    <select class="input text-xs" id="op_${i}">
+                                        <option value="contains" ${c.operator==='contains'?'selected':''}>contains</option>
+                                        <option value="equals" ${c.operator==='equals'?'selected':''}>equals</option>
+                                        <option value="not_equals" ${c.operator==='not_equals'?'selected':''}>not equals</option>
+                                        <option value="empty" ${c.operator==='empty'?'selected':''}>is empty</option>
+                                        <option value="not_empty" ${c.operator==='not_empty'?'selected':''}>is not empty</option>
+                                    </select>
+                                    <input type="text" class="input text-xs" id="val_${i}" value="${c.value || ''}" placeholder="value">
+                                    <button class="btn btn-secondary btn-sm" onclick="removeCriteria(${i})"><i class="fas fa-times"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-secondary btn-sm" onclick="addCriteria()">+ Add</button>
+                            <button class="btn btn-primary btn-sm" onclick="saveCriteria()">Save</button>
+                        </div>
+                    </div>
+                    <div class="bg-[#111827] rounded-lg p-4">
+                        <h3 class="text-sm font-semibold mb-3"><i class="fas fa-cog mr-2"></i>Settings</h3>
+                        <div class="space-y-3">
+                            <div><label class="block text-xs text-[#868e96] mb-1">Default Format</label>
+                                <select id="defaultFmt" class="input w-full" onchange="saveSettings()">
+                                    ${Object.keys(REPORTS.PRESETS).map(p => `<option value="${p}" ${p === currentFmt ? 'selected' : ''}>${p}</option>`).join('')}
+                                </select>
+                            </div>
+                            <button class="btn btn-secondary" onclick="clearDb()"><i class="fas fa-trash mr-2"></i>Clear All</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addCriteria() {
+            openFilterCriteria.push({ field: 'Status', operator: 'contains', value: '' });
+            renderSettings(document.getElementById('mainContent'));
+        }
+
+        function removeCriteria(i) {
+            openFilterCriteria.splice(i, 1);
+            renderSettings(document.getElementById('mainContent'));
+        }
+
+        async function saveCriteria() {
+            const criteria = [];
+            document.querySelectorAll('#criteriaList > div').forEach((_, i) => {
+                criteria.push({
+                    field: document.getElementById(`field_${i}`).value,
+                    operator: document.getElementById(`op_${i}`).value,
+                    value: document.getElementById(`val_${i}`).value
+                });
+            });
+            openFilterCriteria = criteria;
+            await window.DB.saveSettings({ openFilterCriteria: criteria });
+            showToast('Saved');
+        }
+
+        async function saveSettings() {
+            await window.DB.saveSettings({ ppt_format: document.getElementById('defaultFmt').value });
+            showToast('Saved');
+        }
+
+        async function clearDb() {
+            if (confirm('Clear all data?')) {
+                const db = await window.DB.loadTickets();
+                for (const id of Object.keys(db).filter(k => !k.startsWith('_'))) {
+                    await window.DB.deleteTicket(id);
+                }
+                location.reload();
+            }
+        }
+
+        function editTicket(id) {
+            const t = window.db[id];
+            if (!t) return;
+            const container = document.getElementById('mainContent');
+            container.innerHTML = `
+                <div class="max-w-xl mx-auto">
+                    <div class="bg-[#111827] rounded-lg p-4">
+                        <h3 class="text-sm font-semibold mb-3">Edit: ${id}</h3>
+                        <div class="space-y-2">
+                            <div><label class="block text-xs text-[#868e96] mb-1">Title</label><input type="text" id="editTitle" class="input w-full" value="${(t.title || t.Title || '').replace(/"/g, '&quot;')}"></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-xs text-[#868e96] mb-1">Status</label><input type="text" id="editStatus" class="input w-full" value="${t.status || t.Status || ''}"></div>
+                                <div><label class="block text-xs text-[#868e96] mb-1">Issue Type</label><input type="text" id="editType" class="input w-full" value="${t.issue_type || t['Issue Type'] || ''}"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-xs text-[#868e96] mb-1">Environment</label><input type="text" id="editEnv" class="input w-full" value="${t.environment || t.Environment || ''}"></div>
+                                <div><label class="block text-xs text-[#868e96] mb-1">ETA</label><input type="text" id="editEta" class="input w-full" value="${t.eta || t.ETA || ''}"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-xs text-[#868e96] mb-1">Severity</label><input type="text" id="editSev" class="input w-full" value="${t.severity || t.Severity || ''}"></div>
+                                <div><label class="block text-xs text-[#868e96] mb-1">Owner</label><input type="text" id="editOwner" class="input w-full" value="${t.owner || t.Owner || ''}"></div>
+                            </div>
+                            <div class="flex gap-2 mt-3">
+                                <button class="btn btn-primary" onclick="saveTicket('${id}')">Save</button>
+                                <button class="btn btn-secondary" onclick="showView('tickets')">Cancel</button>
+                                <button class="btn btn-secondary text-red-400" onclick="deleteTicket('${id}')">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function saveTicket(id) {
+            await window.DB.upsertTicket(id, {
+                title: document.getElementById('editTitle').value,
+                status: document.getElementById('editStatus').value,
+                issue_type: document.getElementById('editType').value,
+                environment: document.getElementById('editEnv').value,
+                eta: document.getElementById('editEta').value,
+                severity: document.getElementById('editSev').value,
+                owner: document.getElementById('editOwner').value,
+            });
+            showToast('Saved');
+            setTimeout(() => location.reload(), 1000);
+        }
+
+        async function deleteTicket(id) {
+            if (confirm('Delete?')) {
+                await window.DB.deleteTicket(id);
+                location.reload();
+            }
+        }
+
+        DB.init();
+        REPORTS.getColor = getColor;
+
+        (async function init() {
+            try {
+                const settings = await window.DB.loadSettings();
+                if (settings.openFilterCriteria) openFilterCriteria = settings.openFilterCriteria;
+                if (settings.ppt_format) currentFmt = settings.ppt_format;
+
+                showView('tickets');
+            } catch (e) {
+                console.error('Init error:', e);
+                document.getElementById('mainContent').innerHTML =
+                    '<div class="text-center text-red-400 py-8">Error connecting to database. Check Supabase configuration.</div>';
+            }
+        })();
+    </script>
+</body>
+</html>
