@@ -12,21 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clean up repo files
-        run: |
-          rm -rf .git .github .gitignore migrate.py
+      - name: Remove git files
+        run: rm -rf .git .github .gitignore
 
       - name: Upload via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: airvzxf/ftp-deployment-action@latest
         with:
           server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
+          user: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./
-          server-dir: /htdocs/
-          protocol: ftps
-          security: loose
-          passive: true
-          delete-removed: false
-          exclude: |
-            **/node_modules/**
+          local_dir: "./"
+          remote_dir: "/htdocs/"
+          ftp_passive: true
+          ftp_ssl_allow: true
+          ssl_verify_certificate: false
