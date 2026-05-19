@@ -13,17 +13,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug - test connection
+        run: |
+          echo "Testing FTP server..."
+          timeout 10 curl -v --connect-timeout 10 ftp://${{ secrets.FTP_SERVER }} 2>&1 || echo "curl failed (may not matter)"
+          echo "DNS lookup:"
+          host ${{ secrets.FTP_SERVER }} 2>&1 || nslookup ${{ secrets.FTP_SERVER }} 2>&1 || echo "No DNS tools"
+
       - name: Install lftp
         run: sudo apt-get update -y && sudo apt-get install -y lftp
 
       - name: Configure LFTP
         run: |
-          echo "machine ${{ secrets.FTP_SERVER }} login ${{ secrets.FTP_USERNAME }} password ${{ secrets.FTP_PASSWORD }}" > ~/.netrc
+          echo "${{ secrets.FTP_SERVER }} login ${{ secrets.FTP_USERNAME }} password ${{ secrets.FTP_PASSWORD }}" > ~/.netrc
           chmod 600 ~/.netrc
-          mkdir -p ~/.lftp
-          echo "set ssl:verify-certificate no" >> ~/.lftp/rc
-          echo "set ftp:ssl-force true" >> ~/.lftp/rc
+          cat > ~/.lftp/rc << 'EOF'
+          set ssl:verify-certificate no
+          set ftp:ssl-allow true
+          set ftp:ssl-force false
+          set ftp:ssl-protect-data true
+          set net:connection_limit 1
+          set net:timeout 30
+          set net:max-retries 2
+          set cmd:fail-exit yes
+          EOF
 
       - name: Deploy via FTPS
         run: |
-          lftp -e "mirror --reverse --delete --verbose ./ /htdocs/; quit" ${{ secrets.FTP_SERVER }}
+          lftp -e "debug; mirror --reverse --delete --verbose ./ /htdocs/; quit" ${{ secrets.FTP_SERVER }}
