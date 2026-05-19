@@ -25,6 +25,7 @@ jobs:
 
       - name: Configure LFTP
         run: |
+          mkdir -p ~/.lftp
           echo "${{ secrets.FTP_SERVER }} login ${{ secrets.FTP_USERNAME }} password ${{ secrets.FTP_PASSWORD }}" > ~/.netrc
           chmod 600 ~/.netrc
           cat > ~/.lftp/rc << 'EOF'
