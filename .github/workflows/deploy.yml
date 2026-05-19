@@ -27,5 +27,6 @@ jobs:
           protocol: ftps
           security: loose
           passive: true
+          delete-removed: false
           exclude: |
             **/node_modules/**
