@@ -13,17 +13,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install lftp
+        run: sudo apt-get update -y && sudo apt-get install -y lftp
+
+      - name: Configure LFTP
+        run: |
+          echo "machine ${{ secrets.FTP_SERVER }} login ${{ secrets.FTP_USERNAME }} password ${{ secrets.FTP_PASSWORD }}" > ~/.netrc
+          chmod 600 ~/.netrc
+          mkdir -p ~/.lftp
+          echo "set ssl:verify-certificate no" >> ~/.lftp/rc
+          echo "set ftp:ssl-force true" >> ~/.lftp/rc
+
       - name: Deploy via FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./
-          server-dir: /htdocs/
-          protocol: ftps
-          port: 21
-          security: loose
-          exclude: |
-            **/.git*
-            **/.git*/**
+        run: |
+          lftp -e "mirror --reverse --delete --verbose ./ /htdocs/; quit" ${{ secrets.FTP_SERVER }}
