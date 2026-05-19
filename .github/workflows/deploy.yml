@@ -12,8 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Remove git files
-        run: rm -rf .git .github .gitignore
+      - name: Remove unnecessary files
+        run: rm -rf .git .github .gitignore CHANGELOG.md README.md migrate.html migrate.py
 
       - name: Upload via FTP
         uses: airvzxf/ftp-deployment-action@latest
